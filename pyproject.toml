@@ -14,10 +14,10 @@ authors = [
 
 requires-python = ">=3.14"
 dependencies = [
-    "numpy>=2.4.2",
-    "h5py>=3.15.1",
-    "array_api_compat>=1.13.0",
-    "opt_einsum>=3.4.0"
+    "numpy",
+    "h5py",
+    "array_api_compat",
+    "opt_einsum"
 ]
 
 classifiers = [
