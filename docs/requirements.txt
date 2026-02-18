@@ -2,3 +2,4 @@ sphinx
 nbsphinx
 sphinx-copybutton
 sphinx-rtd-theme
+ipython
