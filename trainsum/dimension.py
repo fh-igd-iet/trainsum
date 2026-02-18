@@ -14,7 +14,7 @@ from .sequenceof import SequenceOf
 from .backend import get_index_dtype
 
 @dataclass(frozen=True, init=False)
-class Dimension(SequenceOf[Digit]):
+class Dimension[T: ArrayLike](SequenceOf[Digit]):
     """
     A quantized dimension, represented as a sequence of digits. If a integer is provided during initialization,
     it will be factorized into its prime factors to create the digits. Otherwise, the provided sequence of integers
@@ -70,7 +70,7 @@ class Dimension(SequenceOf[Digit]):
         """Calculate the size of the dimension, i.e., the product of the bases of all digits."""
         return prod(d.base for d in self)
 
-    def to_idxs[T: ArrayLike](self, digits: T) -> T:
+    def to_idxs(self, digits: T) -> T:
         """
         Convert digit indices with shape (len(Dimension), ...) to dimension indices with shape (...).
         """
@@ -85,7 +85,7 @@ class Dimension(SequenceOf[Digit]):
         idxs = digits * xp.reshape(trans, (len(self), *[1]*(len(digits.shape)-1)))
         return xp.sum(idxs, axis=0)
 
-    def to_digits[T: ArrayLike](self, idxs: T) -> T:
+    def to_digits(self, idxs: T) -> T:
         """
         Convert dimension indices with shape (...) to digit indices with shape (len(Dimension), ...).
         """

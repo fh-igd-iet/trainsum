@@ -3,17 +3,16 @@
 # Licensed under the EUPL. See LICENSE.txt.
 
 from types import EllipsisType
-from typing import Any, Protocol, Sequence, Self, TypeVar
+from typing import Any, Protocol, Sequence, Self
 from collections.abc import Buffer
 
-ArrayLike = Any
-DType = Any
-Device = Any
+#ArrayLike = Any
+#DType = Any
+#Device = Any
 #ArrayNamespace = Any
 
 NestedSequence = Sequence[Any]
 
-"""
 class Device(Protocol):
     pass
 
@@ -76,9 +75,6 @@ class ArrayLike(Protocol):
     def __sub__(self, other: int | float | complex | Self, /) -> Self: ...
     def __truediv__(self, other: int | float | complex | Self, /) -> Self: ...
     def __xor__(self, other: int | bool | Self) -> Self: ...
-
-ArrayBound = TypeVar("ArrayBound", bound=ArrayLike)
-"""
 
 class Finfo(Protocol):
     @property

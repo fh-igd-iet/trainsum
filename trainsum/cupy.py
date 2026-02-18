@@ -3,6 +3,7 @@
 # Licensed under the EUPL. See LICENSE.txt.
 
 import cupy as cp
+from cupy.typing import NDArray
 from .trainsum import TrainSum
 
-trainsum = TrainSum[cp.ndarray](cp)
+trainsum = TrainSum[cp.typing.NDArray](cp)

@@ -294,11 +294,11 @@ class TrainSum[NDArray: Any]:
         return Domain(lower, upper)
 
     @overload
-    def dimension(self, size: int, /) -> Dimension: ...
+    def dimension(self, size: int, /) -> Dimension[NDArray]: ...
     @overload
-    def dimension(self, bases: Sequence[int], /) -> Dimension: ...
+    def dimension(self, bases: Sequence[int], /) -> Dimension[NDArray]: ...
     # implementation
-    def dimension(self, size: int | Sequence[int], /) -> Dimension:
+    def dimension(self, size: int | Sequence[int], /) -> Dimension[NDArray]:
         """
         Quantized dimension, defined by a sequence of digits. If an integer is provided, it will be 
         factorized into its prime factors to create the digits. Otherwise, the provided sequence of
@@ -307,11 +307,11 @@ class TrainSum[NDArray: Any]:
         return Dimension(size)
 
     @overload
-    def uniform_grid(self, dim: Dimension, domain: Domain, /) -> UniformGrid: ...
+    def uniform_grid(self, dim: Dimension, domain: Domain, /) -> UniformGrid[NDArray]: ...
     @overload
-    def uniform_grid(self, dims: Sequence[Dimension], domains: Sequence[Domain], /) -> UniformGrid: ...
+    def uniform_grid(self, dims: Sequence[Dimension], domains: Sequence[Domain], /) -> UniformGrid[NDArray]: ...
     # implementation
-    def uniform_grid(self, dims: Any, domains: Any, /) -> UniformGrid:
+    def uniform_grid(self, dims: Any, domains: Any, /) -> UniformGrid[NDArray]:
         """
         Uniformly N-dimensional spaced grid.
         """

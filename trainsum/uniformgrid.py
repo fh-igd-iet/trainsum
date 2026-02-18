@@ -10,7 +10,7 @@ from .domain import Domain
 from .dimension import Dimension
 
 @dataclass(frozen=True, init=False)
-class UniformGrid:
+class UniformGrid[T: ArrayLike]:
 
     """
     Uniform spaced N-dimensional grid. The grid associates a dimension and a domain to each axis.
@@ -53,7 +53,7 @@ class UniformGrid:
     #-------------------------------------------------------------------------
     #methods
 
-    def to_coords[T: ArrayLike](self, idxs: T) -> T:
+    def to_coords(self, idxs: T) -> T:
         """Convert from index representation to coordinate representation."""
         xp = namespace_of_arrays(idxs)
         int_type = get_index_dtype(xp)
@@ -66,7 +66,7 @@ class UniformGrid:
                               
         return coords
 
-    def to_idxs[T: ArrayLike](self, coords: T) -> T:
+    def to_idxs(self, coords: T) -> T:
         """Convert from coordinate representation to index representation."""
         xp = namespace_of_arrays(coords)
         int_type = get_index_dtype(xp)

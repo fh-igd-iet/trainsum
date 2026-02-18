@@ -75,7 +75,7 @@ def fft_layer[T: ArrayLike](
         if i == idx:
             for j in range(row_digit.base):
                 for k in range(col_digit.base):
-                    row_fac = row_digit.factor * j
+                    row_fac = ref_xi * j
                     col_fac = col_digit.factor * k
                     tmp[j,j,k,j] = xp.exp(xp.asarray(factor*row_fac*col_fac))
         else:
