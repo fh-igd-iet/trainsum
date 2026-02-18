@@ -23,3 +23,7 @@ The dependencies are:
 - array_api_compat
 - opt_einsum
 - hdf5
+
+Documentation
+-------------
+The documentation for trainsum can be found at https://trainsum.readthedocs.io.

@@ -32,3 +32,4 @@ keywords = ["quantics", "tensor train", "tensor network", "quantum inspired"]
 
 [project.urls]
 Repository = "https://github.com/fh-igd-iet/trainsum"
+Documentation = "https://trainsum.readthedocs.io"
