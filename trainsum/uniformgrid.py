@@ -61,7 +61,6 @@ class UniformGrid[T: ArrayLike]:
         coords = xp.zeros(idxs.shape, device=idxs.device)
         for i, (dim, domain) in enumerate(zip(self.dims, self.domains)):
             vals = domain.diff / (dim.size()-1) * idxs[i,:] + domain.lower
-            #coords = set_data(coords, (i, ...), vals)
             coords[i,...] = vals
                               
         return coords
@@ -79,7 +78,6 @@ class UniformGrid[T: ArrayLike]:
             vals = xp.asarray(xp.round(vals),
                               dtype=int_type,
                               device=coords.device)
-            #idxs = set_data(idxs, (i, ...), vals)
             idxs[i,...] = vals
         return idxs
 

@@ -109,7 +109,7 @@ class Environment:
             tns = self._contr[idx].get_data(*ops, idx_map=self._inp.idx_map)
             return self._to_right_exprs[idx](cache[idx], *tns)
         else:
-            tns = self._contr[idx].get_data(*ops)
+            tns = self._contr[idx].get_data(*ops, idx_map=self._inp.idx_map)
             to_right_expr = self._to_right_expression(idx, *[op.shape for op in ops])
             return to_right_expr(cache[idx], *tns)
 
@@ -124,7 +124,7 @@ class Environment:
             tns = self._contr[idx].get_data(*ops, idx_map=self._inp.idx_map)
             return self._to_left_exprs[idx](*tns, cache[idx+2])
         else:
-            tns = self._contr[idx].get_data(*ops)
+            tns = self._contr[idx].get_data(*ops, idx_map=self._inp.idx_map)
             to_left_expr = self._to_left_expression(idx, *[op.shape for op in ops])
             return to_left_expr(*tns, cache[idx+2])
 

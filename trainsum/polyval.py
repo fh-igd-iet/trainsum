@@ -32,13 +32,12 @@ def polyval[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, coeffs: Sequ
         for j in range(order):
             for k in range(digit.base):
                 row_data = xp.asarray(_get_row(order-j, k*xi+off))
-                #data = set_data(data, (j, k, slice(j, None)), row_data)
                 data[j,k,j:] = row_data
         cores.append(data)
         
-    tmp = xp.asarray(coeffs).reshape(1, order)
+    tmp = xp.reshape(xp.asarray(coeffs), (1, order))
     cores[0] = xp.tensordot(tmp, cores[0], axes=([1], [0]))
-    tmp = xp.asarray([*[0.0]*(order-1), 1]).reshape(order, 1)
+    tmp = xp.reshape(xp.asarray([*[0.0]*(order-1), 1]), (order, 1))
     idx = len(cores[-1].shape)-1
     cores[-1] = xp.tensordot(cores[-1], tmp, axes=([idx], [0]))
     return TrainBase(shape, cores, copy_data=False)

@@ -2,7 +2,7 @@
 # acting on behalf of its Fraunhofer Institut für Graphische Datenverarbeitung.
 # Licensed under the EUPL. See LICENSE.txt.
 
-from typing import Self, Callable, overload, Sequence, Optional
+from typing import Self, Callable, overload, Sequence, Optional, Any
 from copy import deepcopy
 
 from trainsum.utils import namespace_of_trains
@@ -24,7 +24,7 @@ from .fuse import fuse
 from .conj import conj
 from .truncate import truncate
 
-class TensorTrain[S: ArrayLike]:
+class TensorTrain[S: Any]:
     """
     N-dimensional tensor train. Main class for representing and manipulating tensor trains.
     Should not be instantiated directly, but rather through the `tensortrain` function.
@@ -108,6 +108,18 @@ class TensorTrain[S: ArrayLike]:
 
     def __radd__(self, other: int | float | Self, /) -> Self:
         return deepcopy(self).__iadd__(other)
+
+    # ------------------------------------------------------------------------
+    # subtraction
+
+    def __isub__(self, other: int | float | Self, /) -> Self:
+        return self.__iadd__(-1*other)
+
+    def __sub__(self, other: int | float | Self, /) -> Self:
+        return deepcopy(self).__iadd__(-1*other)
+
+    def __rsub__(self, other: int | float | Self, /) -> Self:
+        return (-self).__iadd__(other)
 
     # ------------------------------------------------------------------------
     # divide

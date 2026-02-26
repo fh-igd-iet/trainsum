@@ -15,6 +15,13 @@ class ExactAddition:
         xp = namespace_of_trains(*trains)
         device, dtype = get_device_dtype(trains)
 
+        if len(trains[0].shape) == 1:
+            data = trains[0].data[0]
+            for train in trains[1:]:
+                data += train.data[0]
+            return TrainBase(trains[0].shape, [data], copy_data=False)
+
+
         data = []
         for idx in range(len(trains[0].shape)):
             is_begin = (idx == 0)

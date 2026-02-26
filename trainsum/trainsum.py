@@ -39,6 +39,7 @@ from .discrete_fourier_transform import (
     iqftshift as _iqftshift,
     qftfreq as _qftfreq
 )
+from .wavelet import wavelet as _wavelet
 
 from .io import write as _write
 from .io import read as _read
@@ -411,6 +412,14 @@ class TrainSum[NDArray: Any]:
         upper triangular toeplitz matrices. The resulting tensor train is rank 2.
         """
         return TensorTrain(_toeplitz(self.namespace, dim, mode), copy_data=False)
+
+    def wavelet(self, input_size: int, coeffs: Sequence[float]) -> TensorTrain[NDArray]:
+        """
+        TODO(mklein): write doc
+        """
+        return TensorTrain(
+            _wavelet(self.namespace, input_size, coeffs), copy_data=False
+        )
 
     @overload
     def tensortrain(self, shape: TrainShape, data: Callable[[NDArray], NDArray], start_idxs: Optional[NDArray] = None, /) -> TensorTrain[NDArray]: ...

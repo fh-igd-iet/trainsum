@@ -15,8 +15,7 @@ The main features are:
 Citing
 ------
 
-Coming soon!
-
+If you use **trainsum** in your research, please cite https://arxiv.org/abs/2602.20226.
 
 .. toctree::
     :maxdepth: 2
