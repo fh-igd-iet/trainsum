@@ -30,4 +30,4 @@ The documentation for trainsum can be found at https://trainsum.readthedocs.io.
 
 Citing
 ------
-If u use trainsum in your research, please cite https://arxiv.org/abs/2602.20226.
+If you use trainsum in your research, please cite https://arxiv.org/abs/2602.20226.

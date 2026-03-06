@@ -9,6 +9,9 @@ from .dimension import Dimension
 from .trainshape import TrainShape
 from .trainbase import TrainBase
 
+# for further reading please consider https://arxiv.org/abs/2602.20226 section 4.2 "Shift and Toeplitz matrices"
+# see equation 21
+
 def toeplitz[T: ArrayLike](
         xp: ArrayNamespace[T],
         dim: Dimension,
@@ -89,6 +92,5 @@ def shift_core[T: ArrayLike](
             s = j + digit + c_in
             i = s % base
             c_out = s // base  # 0 or 1
-            #core = set_data(core, (c_out, i, j, c_in), 1.0)
             core[c_out,i,j,c_in] = 1.0
     return core

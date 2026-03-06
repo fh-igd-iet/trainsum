@@ -7,16 +7,23 @@ from .dimension import Dimension
 from .trainshape import TrainShape, change_dims
 from .trainbase import TrainBase
 
-def fuse[T: ArrayLike](train1: TrainBase[T], train2: TrainBase[T]) -> TrainBase[T]:
-    dims1 = [Dimension([d.base for d in dim]) for dim in train1.shape.dims]
-    shape1 = change_dims(train1.shape, dims1)
+def fuse[T: ArrayLike](*trains: TrainBase[T]) -> TrainBase[T]:
+    """Concatenates trains forming their outer product"""
+    if len(trains) < 2:
+        raise ValueError("fuse() requires at least two trains")
 
-    dims2 = [Dimension([d.base for d in dim]) for dim in train2.shape.dims]
-    shape2 = change_dims(train2.shape, dims2)
+    all_dims = []
+    all_digits = []
+    all_data = []
 
-    dims = [*dims1, *dims2]
-    digits = [*shape1.digits, *shape2.digits]
+    for train in trains:
+        # copy shape and dimensions
+        dims = [Dimension([d.base for d in dim]) for dim in train.shape.dims]
+        shape = change_dims(train.shape, dims)
 
-    shape = TrainShape(dims, digits)
-    data = [*train1.data, *train2.data]
-    return TrainBase(shape, data)
+        all_dims.extend(dims)
+        all_digits.extend(shape.digits)
+        all_data.extend(train.data)
+
+    shape = TrainShape(all_dims, all_digits)
+    return TrainBase(shape, all_data)

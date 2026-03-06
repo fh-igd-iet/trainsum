@@ -11,6 +11,8 @@ from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .full import full
 
+# for further reading please consider https://arxiv.org/abs/2602.20226 section 4.1 "Polynomials"
+
 def polyval[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, coeffs: Sequence[float], offset: float) -> TrainBase[T]:
     if grid.ndims != 1:
         raise ValueError("Polynomial function only supports 1D uniform grid")
@@ -41,6 +43,8 @@ def polyval[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, coeffs: Sequ
     idx = len(cores[-1].shape)-1
     cores[-1] = xp.tensordot(cores[-1], tmp, axes=([idx], [0]))
     return TrainBase(shape, cores, copy_data=False)
+
+# equation 31
 
 def _get_row(num: int, val: float) -> list[float]:
     row = [0.0]*num

@@ -24,10 +24,10 @@ from .fuse import fuse
 from .conj import conj
 from .truncate import truncate
 
-class TensorTrain[S: Any]:
+class TensorTrain[S: ArrayLike]:
     """
-    N-dimensional tensor train. Main class for representing and manipulating tensor trains.
-    Should not be instantiated directly, but rather through the `tensortrain` function.
+    N-dimensional tensor train. Main class for representing and manipulating tensor trains.\
+Should not be instantiated directly, but rather through the `tensortrain` function.
     """
 
     _base: TrainBase[S]
@@ -200,6 +200,11 @@ class TensorTrain[S: Any]:
         """Perform an element-wise transformation of the tensor train defined by some function."""
         base = transform(self._base, func)
         return type(self)(base, copy_data=False)
+
+    def reverse(self) -> Self:
+        """Return a new tensor train with reversed order of cores and digits."""
+        self._base.reverse()
+        return self
 
     def __repr__(self) -> str:
         return f"TensorTrain: {self._base.shape}"

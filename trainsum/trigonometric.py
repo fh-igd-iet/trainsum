@@ -12,6 +12,8 @@ from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .full import full
 
+# for further reading please consider https://arxiv.org/abs/2602.20226 section 4.1 "Trigonometric functions"
+
 def sin[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, factor: float, offset: float) -> TrainBase: 
     train = cos(xp, grid, factor, offset+pi/2/abs(factor))
     if factor < 0.0:
@@ -51,6 +53,8 @@ def cos[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, factor: float, o
 
     cores[0] = 0.5 * cores[0]
     return TrainBase(shape, cores, copy_data=False)
+
+# see equation 26
 
 def _givens_rotation(theta: float) -> list[list[float]]:
     return [[mcos(theta), -msin(theta)],

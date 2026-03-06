@@ -19,6 +19,9 @@ from .polyval import polyval
 from .conj import conj
 from .utils import namespace_of_trains
 
+# for further reading please consider https://arxiv.org/abs/2602.20226 section 4.3 "Fourier transformation"
+# see equation 43
+
 def qft[T: ArrayLike](
         xp: ArrayNamespace[T],
         dim: Dimension,

@@ -9,6 +9,9 @@ from .uniformgrid import UniformGrid
 from .trainbase import TrainBase
 from .trainshape import TrainShape
 
+# for further reading please consider https://arxiv.org/abs/2602.20226 section 4.1 "Exponential functions"
+# see equation 21
+
 def exp[T: ArrayLike](xp: ArrayNamespace[T], grid: UniformGrid, factor: float, offset: float) -> TrainBase[T]:
     if len(grid.dims) != 1:
         raise ValueError("Exponential function only supports 1D uniform grid")

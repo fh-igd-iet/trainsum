@@ -35,7 +35,7 @@ Quantized dimensions
 --------------------
 
 Having imported the library we can start with the most important concept, the quantized dimension.
-A quantized dimension is a dimension of size N, which has been factorized into some integers.
+A quantized dimension is a dimension of size N, which has been factorized into some integers, referred to as *digits*. 
 With **trainsum** this can be simply done via
 
 .. code-block:: python3 
@@ -76,7 +76,7 @@ The preferred way of defining a :class:`~trainsum.trainshape.TrainShape` is with
 .. figure:: pics/trainshape.png
 
 :class:`~trainsum.trainshape.TrainShape` does not only define the arrangement of the digits within the tensor train but also the size of the internal dimensions.
-These dimensions are often called bond dimensions and the corresponding sizes ranks.
+These dimensions are often called bond dimensions and the corresponding sizes are called ranks.
 
 Construction
 ------------
@@ -90,7 +90,7 @@ This includes:
     - polynomials
     - shift matrices
     - Toeplitz tensors
-    - discrete Fourier-transformation
+    - discrete Fourier-transformations
 
 For some of those we need a :class:`~trainsum.uniformgrid.UniformGrid`, which can be initialized with a :class:`~trainsum.dimension.Dimension` and a :class:`~trainsum.domain.Domain`.
 
@@ -126,7 +126,7 @@ If the second argument is a sequence of tensors, the tensors are interpreted as 
 
    # function approximation
    func = lambda idxs: np.exp(-np.sum(grid.to_coords(idxs)**2, axis=0))
-   train = ts.tensortrain(shape, data)
+   train = ts.tensortrain(shape, func)
 
    # explicit construction with cores
    cores = [np.ones([1, digit.base, 1]) for digit in shape.dims[0]]
@@ -140,10 +140,10 @@ Some arithmetic operations like addition or matrix multiplication can be perform
 Doing so leads to a increase of the ranks and may lead to tensor trains that do not have a computational advantage.
 To counteract the increasing ranks we can perform the operations approximately using either decomposition (also called zip-up) algorithms or variational algorithms.
 A lot of other operations, especially element wise operations, like abs or sqrt cannot be performed exactly.
-The fallback in this cases is a sampling algorithm, the cross interpolation.
+The fallback in these cases is a sampling algorithm, the cross interpolation.
 
 The main functions for arithmetic operations are :meth:`~trainsum.trainsum.TrainSum.einsum`, :meth:`~trainsum.trainsum.TrainSum.einsum_expression`, :meth:`~trainsum.trainsum.TrainSum.add`, :meth:`~trainsum.tensortrain.TensorTrain.transform` and the magic methods of the :class:`~trainsum.tensortrain.TensorTrain` class like :code:`__mul__`.
-To easily define the corresponding algorithms in the background **trainsum** heavily relies upon context manager.
+To easily define the corresponding algorithms in the background **trainsum** heavily relies upon context managers.
 There are five of them available:
 
 ===============         ========
@@ -183,12 +183,12 @@ evaluation              TensorTrain transformations, tensortrain (with function)
 The context managers are stored in a global dictionary with (backend, option_type, threading_id) as key and delete themselves upon calling their exit function.
 One can globally set the options via :meth:`~trainsum.trainsum.TrainSum.set_options`.
 
-Solver
+Solvers
 ------
 
-**trainsum** provides solver for eigenvalue equations and linear equation systems.
-The solver are defined by linear operators (:meth:`~trainsum.trainsum.TrainSum.linear_map`), that can be defined with einsum like expressions.
-Here is a example for solving the quantum harmonic oscillator:
+**trainsum** provides solvers for eigenvalue equations and linear equation systems.
+The solvers are defined by linear operators (:meth:`~trainsum.trainsum.TrainSum.linear_map`), that can be defined with einsum-like expressions.
+Here is an example for solving the quantum harmonic oscillator:
 
 .. code-block:: python3 
 

@@ -39,6 +39,7 @@ from .discrete_fourier_transform import (
     iqftshift as _iqftshift,
     qftfreq as _qftfreq
 )
+from .wavelet import wavelet as _wavelet
 
 from .io import write as _write
 from .io import read as _read
@@ -83,10 +84,10 @@ class LinearMap[NDArray: ArrayLike]:
 class EigSolver[NDArray: ArrayLike, T: LocalEigSolverResult]:
     """
     Variational eigenvalue solver for quantics tensor trains. The eigenvalue equation is\
-    defined by the provided linear maps. The DMRG algotihm is using the canonical format
-    of tensor trains to map the global eigenvalue problem to a sequence of local problems,
-    which are solved by the provided local solver. If the sweeping strategy has ncores>=2
-    the decomposition is used to recover the single cores, thereby defining the rank.
+defined by the provided linear maps. The DMRG algotihm is using the canonical format\
+of tensor trains to map the global eigenvalue problem to a sequence of local problems,\
+which are solved by the provided local solver. If the sweeping strategy has ncores>=2\
+the decomposition is used to recover the single cores, thereby defining the rank.
     """
 
     @property
@@ -411,6 +412,16 @@ class TrainSum[NDArray: Any]:
         upper triangular toeplitz matrices. The resulting tensor train is rank 2.
         """
         return TensorTrain(_toeplitz(self.namespace, dim, mode), copy_data=False)
+
+    def wavelet(self, dim: Dimension, coeffs: Sequence[float], decomposition: MatrixDecomposition = SVDecomposition(max_rank=16, cutoff=1e-15)) -> TensorTrain[NDArray]:
+        """
+        Wavelet transformation matrix as a quantics tensor train.
+        Coeffs define the low-pass filter coefficients defining the wavelet.
+        The wavelet is constructed approximately using a decomposition algorithm.
+        Application of the train results in [approximations | details] coefficients.
+        Note: no padding used, thus the extremes might differ from `pywt`.
+        """
+        return TensorTrain(_wavelet(self.namespace, dim, coeffs, decomposition), copy_data=False)
 
     @overload
     def tensortrain(self, shape: TrainShape, data: Callable[[NDArray], NDArray], start_idxs: Optional[NDArray] = None, /) -> TensorTrain[NDArray]: ...
