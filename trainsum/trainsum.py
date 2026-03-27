@@ -60,6 +60,7 @@ from .einsum import einsum as _einsum
 from .einsum import EinsumExpression as _EinsumExpression
 from .evaluate import EvaluateExpression as _EvaluationExpression, evaluate as _evaluate
 from .min_max import MinMaxResult, min_max as _min_max
+from .outer import outer
 
 from .options import EvaluationOptions, ExactOptions, DecompositionOptions, OptionType, VariationalOptions, CrossOptions, set_options, get_options
 from .qrdecomposition import QRDecomposition
@@ -667,6 +668,16 @@ class TrainSum[NDArray: Any]:
         Add multiple tensor trains. Affected by einsum context manager.
         """
         base = add(train1._base, train2._base, *[train._base for train in trains])
+        return TensorTrain(base, copy_data=False)
+       
+    def outer(
+            self,
+            *trains: TensorTrain[NDArray]
+    ) -> TensorTrain[NDArray]:
+        """
+        Form the outer product of multiple tensor trains by fusing them.
+        """
+        base = outer(*[train._base for train in trains])
         return TensorTrain(base, copy_data=False)
 
     #-------------------------------------------------------------------------------------------------
