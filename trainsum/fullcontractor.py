@@ -5,6 +5,7 @@
 from types import NoneType
 from copy import deepcopy
 
+from .backend import namespace_of_arrays
 from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .einsumcontraction import EinsumContraction
@@ -12,23 +13,23 @@ from .contractor import ArrayContractor, OptimizeKind
 from .utils import check_operand_shapes, get_shapes
 from .contractorinput import ContractorInput
 
-class FullContractor:
 
+class FullContractor:
     optimizer: OptimizeKind
     _contr: EinsumContraction
     _inp: NoneType | ContractorInput = None
     _expr: NoneType | ArrayContractor = None
 
-    def __init__(self,
-                 contr: EinsumContraction, 
-                 optimizer: OptimizeKind = "greedy") -> None:
+    def __init__(
+        self, contr: EinsumContraction, optimizer: OptimizeKind = "greedy"
+    ) -> None:
         if contr.result_shape is not None:
             raise ValueError("FullContractor can only be used for full contractions.")
 
         self._contr = deepcopy(contr)
         self.optimizer = deepcopy(optimizer)
 
-    def __call__(self, *ops: TrainBase, expr: bool = False) -> float:
+    def __call__(self, *ops: TrainBase, expr: bool = False) -> float | complex:
         shapes = get_shapes(*ops)
         if expr or self._inp is None:
             self.calc_expressions(*shapes)
@@ -48,9 +49,13 @@ class FullContractor:
         expr = ArrayContractor(eq, *tns, optimizer=self.optimizer)
         return expr
 
-    def _contract(self, *ops: TrainBase) -> float:
+    def _contract(self, *ops: TrainBase) -> float | complex:
         if self._expr is None or self._inp is None:
             raise RuntimeError("Expression or input cannot be None here.")
         tns = self._contr[0].get_data(*ops, idx_map=self._inp.idx_map)
         res = self._expr(*tns)
-        return float(res[0,0])
+
+        xp = namespace_of_arrays(res)
+        if xp.isdtype(res.dtype, "complex floating"):
+            return complex(res)
+        return float(res[0, 0])

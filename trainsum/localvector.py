@@ -12,18 +12,20 @@ from .sweepingstrategy import LocalRange
 from .trainbase import TrainBase
 from .utils import namespace_of_trains
 
+
 def local_vector[T: ArrayLike, S: MatrixDecompositionResult](
-        train: TrainBase[T],
-        decomposition: MatrixDecomposition[T, S],
-        ) -> Generator[T, tuple[LocalRange, T]]:
+    train: TrainBase[T],
+    decomposition: MatrixDecomposition[T, S],
+) -> Generator[T, tuple[LocalRange, T]]:
     gen = local_vector_gen(train, decomposition)
     next(gen)
     return gen
 
+
 def local_vector_gen[T: ArrayLike, S: MatrixDecompositionResult](
-        train: TrainBase[T],
-        decomposition: MatrixDecomposition[T, S],
-        ) -> Generator[T, tuple[LocalRange, T]]:
+    train: TrainBase[T],
+    decomposition: MatrixDecomposition[T, S],
+) -> Generator[T, tuple[LocalRange, T]]:
     xp = namespace_of_trains(train)
     supercore = SuperCore()
     decomp = TensorDecomposition(decomposition)
@@ -43,24 +45,23 @@ def local_vector_gen[T: ArrayLike, S: MatrixDecompositionResult](
                     supercore.add_right(train.shape.digits[i], train.data[i])
                 continue
 
-
             idx0 = train.shape.digits.index(supercore.shapes[0])
             idx1 = train.shape.digits.index(supercore.shapes[-1])
 
-            slc = slice(idx0, min(begin, idx1+1))
+            slc = slice(idx0, min(begin, idx1 + 1))
             data = []
             norm = []
-            for i in range(idx0, min(begin, idx1+1)):
+            for i in range(idx0, min(begin, idx1 + 1)):
                 cres = supercore.cut_left(decomp)
                 data.append(cres.data)
                 norm.append(cres.norm)
                 idx0 += 1
             train.set_data(slc, data, norm)
 
-            slc = slice(max(end-1, idx0-1)+1, idx1+1)
+            slc = slice(max(end - 1, idx0 - 1) + 1, idx1 + 1)
             data = []
             norm = []
-            for i in range(idx1, max(end-1, idx0-1), -1):
+            for i in range(idx1, max(end - 1, idx0 - 1), -1):
                 cres = supercore.cut_right(decomp)
                 data.append(cres.data)
                 norm.append(cres.norm)
@@ -75,9 +76,9 @@ def local_vector_gen[T: ArrayLike, S: MatrixDecompositionResult](
                     supercore.add_right(train.shape.digits[i], train.data[i])
                 continue
 
-            for i in range(idx0-1, begin-1, -1):
+            for i in range(idx0 - 1, begin - 1, -1):
                 supercore.add_left(train.shape.digits[i], train.data[i])
-            for i in range(idx1+1, end):
+            for i in range(idx1 + 1, end):
                 supercore.add_right(train.shape.digits[i], train.data[i])
 
     except GeneratorExit:
@@ -89,4 +90,4 @@ def local_vector_gen[T: ArrayLike, S: MatrixDecompositionResult](
             idxs.append(train.shape.digits.index(cres.shape))
             data.append(cres.data)
             norm.append(cres.norm)
-        train.set_data(slice(idxs[0], idxs[-1]+1), data, norm)
+        train.set_data(slice(idxs[0], idxs[-1] + 1), data, norm)

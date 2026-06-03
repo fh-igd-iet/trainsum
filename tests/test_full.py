@@ -4,8 +4,8 @@ from itertools import product
 from trainsum import TrainSum
 from utils import backends
 
-class TestFull(unittest.TestCase):
 
+class TestFull(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [120, 256, 280, 1024]
@@ -19,8 +19,9 @@ class TestFull(unittest.TestCase):
             exact = xp.full([size], val)
             train = ts.full(shape, val)
             approx = train.to_tensor()
-            diff = abs(xp.sum((exact - approx)**2))
+            diff = abs(xp.sum((exact - approx) ** 2))
             self.assertLess(diff, 1e-7)
+
 
 if __name__ == "__main__":
     unittest.main()

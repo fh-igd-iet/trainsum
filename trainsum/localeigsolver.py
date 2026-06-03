@@ -5,6 +5,7 @@
 from typing import Protocol, Sequence, Callable
 from .backend import ArrayLike
 
+
 class LocalEigSolverResult[T: ArrayLike](Protocol):
     """Protocol for the result of a local eigenvalue solver."""
 
@@ -12,16 +13,15 @@ class LocalEigSolverResult[T: ArrayLike](Protocol):
     array: T
 
     #: The computed eigenvalue.
-    value: float
+    value: float | complex
+
 
 class LocalEigSolver[T: LocalEigSolverResult](Protocol):
     """Protocol for a local eigenvalue solver."""
 
-    def __call__[S: ArrayLike](self,
-                 mat: Callable[[S], S],
-                 guess: S,
-                 states: Sequence[S] = [], /
-                 ) -> T:
+    def __call__[S: ArrayLike](
+        self, mat: Callable[[S], S], guess: S, states: Sequence[S] = [], /
+    ) -> T:
         """
         Solve an eigenvalue problem for a linear map with an initial guess and optional states to orthogonalize against.
         """

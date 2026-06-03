@@ -11,6 +11,7 @@ The main features are:
     - **einsum**-operations equivalent to NumPy's einsum function
     - generic **backends** for NumPy, Torch and CuPy
     - tensorized **solver** for eigenvalue equations and linear equation systems
+    - **slicing** and **indexing** operations with tensor trains
 
 Citing
 ------

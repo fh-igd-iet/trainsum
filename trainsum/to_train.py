@@ -6,6 +6,7 @@ from .backend import ArrayLike, namespace_of_arrays, shape
 from .trainshape import TrainShape
 from .trainbase import TrainBase
 
+
 def to_train[T: ArrayLike](tshape: TrainShape, data: T) -> TrainBase[T]:
     xp = namespace_of_arrays(data)
     if len(tshape.dims) != len(shape(data)):
@@ -23,4 +24,4 @@ def to_train[T: ArrayLike](tshape: TrainShape, data: T) -> TrainBase[T]:
 
     data = xp.reshape(data, [d.base for dim in tshape.dims for d in dim])
     data = xp.permute_dims(data, perm)
-    return TrainBase(tshape, [data[xp.newaxis,...,xp.newaxis]])
+    return TrainBase(tshape, [data[xp.newaxis, ..., xp.newaxis]])

@@ -3,7 +3,16 @@
 # Licensed under the EUPL. See LICENSE.txt.
 
 from .storagetensor import StorageTensor
-from .backend import Device, DType, ArrayLike, get_index_dtype, namespace_of_arrays, size, shape
+from .backend import (
+    Device,
+    DType,
+    ArrayLike,
+    get_index_dtype,
+    namespace_of_arrays,
+    size,
+    shape,
+)
+
 
 class ValueSet[T: ArrayLike]:
     _data: StorageTensor
@@ -51,17 +60,17 @@ class ValueSet[T: ArrayLike]:
 
         to_add = xp.ones(vals.shape[1:], dtype=btype)
         for j in range(size(to_add)):
-            key = tuple(int(val) for val in vals[:,j])
+            key = tuple(int(val) for val in vals[:, j])
             size_ = len(self._set)
             self._set.add(key)
             to_add[j] = len(self._set) > size_
-        vals = vals[:,to_add]
+        vals = vals[:, to_add]
         added = shape(vals)[1]
         if size(vals) == 0:
             return 0
 
         self._data.add_to_dim(1, added)
-        self._data[:,-added:] = vals
+        self._data[:, -added:] = vals
         return added
 
     def _check_vals(self, vals: ArrayLike) -> None:
@@ -76,4 +85,6 @@ class ValueSet[T: ArrayLike]:
         if storage.ndim != 2:
             raise ValueError("Storage tensor has incorrect shape")
         elif storage.dtype != get_index_dtype(xp):
-            raise ValueError(f"Storage tensor has incorrect dtype, expected {get_index_dtype(xp)}")
+            raise ValueError(
+                f"Storage tensor has incorrect dtype, expected {get_index_dtype(xp)}"
+            )

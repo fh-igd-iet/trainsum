@@ -16,8 +16,8 @@ from .einsumequation import EinsumEquation
 from .linearmapgenerator import LinearMapGenerator
 from .generatorcallabletype import GeneratorCallableType
 
-class LinearMap[T: ArrayLike]:
 
+class LinearMap[T: ArrayLike]:
     optimizer: OptimizeKind
     _ops: Sequence[TrainBase]
 
@@ -26,44 +26,48 @@ class LinearMap[T: ArrayLike]:
         return self._map_gen.result_shape
 
     def __init__(
-            self,
-            eq: str,
-            *ops: TrainShape | TrainBase[T],
-            optimizer: OptimizeKind = DEFAULT_OPTIMIZER) -> None:
+        self,
+        eq: str,
+        *ops: TrainShape | TrainBase[T],
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+    ) -> None:
         self.optimizer = deepcopy(optimizer)
         self._ops, self._map_gen = self._get_map_gen(eq, *ops)
 
     def __call__(
-            self,
-            guess: TrainBase[T],
-            expr: bool = False
-            ) -> Generator[Callable[[T], T], tuple[LocalRange, GeneratorCallableType]]:
+        self, guess: TrainBase[T], expr: bool = False
+    ) -> Generator[Callable[[T], T], tuple[LocalRange, GeneratorCallableType]]:
         return self._map_gen(*self._ops, guess, expr=expr)
 
     def calc_expressions(
-            self,
-            strat: SweepingStrategy,
-            guess: TrainShape | TrainBase) -> None:
+        self, strat: SweepingStrategy, guess: TrainShape | TrainBase
+    ) -> None:
         guess_shape = guess if isinstance(guess, TrainShape) else guess.shape
-        self._map_gen.calc_expressions(strat, *[op.shape for op in self._ops], guess_shape)
+        self._map_gen.calc_expressions(
+            strat, *[op.shape for op in self._ops], guess_shape
+        )
 
-    def _get_map_gen(self, eq: str, *ops: TrainShape | TrainBase[T]) -> tuple[Sequence[TrainBase], LinearMapGenerator]:
+    def _get_map_gen(
+        self, eq: str, *ops: TrainShape | TrainBase[T]
+    ) -> tuple[Sequence[TrainBase], LinearMapGenerator]:
         idx = self._ref_idx(*ops)
         ops_, guess = self._split_ops(idx, *ops)
 
         tmp = eq.split("->")
         op_strs = tmp[0].split(",")
         guess_str = op_strs.pop(idx)
-        eq = ",".join(op_strs) +f",{guess_str}->{tmp[1]}"
+        eq = ",".join(op_strs) + f",{guess_str}->{tmp[1]}"
 
         einsum_eq = EinsumEquation(eq, *[op.shape for op in ops_], guess)
         contr = EinsumContraction(einsum_eq)
         return ops_, LinearMapGenerator(contr, idx, optimizer=self.optimizer)
 
-    def _split_ops(self, idx: int, *ops: TrainShape | TrainBase) -> tuple[list[TrainBase], TrainShape]:
+    def _split_ops(
+        self, idx: int, *ops: TrainShape | TrainBase
+    ) -> tuple[list[TrainBase], TrainShape]:
         ops_ = list(deepcopy(op) for op in ops)
         ref = ops_.pop(idx)
-        return ops_, ref # type: ignore
+        return ops_, ref  # type: ignore
 
     def _ref_idx(self, *ops: TrainShape | TrainBase[T]) -> int:
         idx = -1

@@ -5,6 +5,7 @@
 from typing import Self
 from dataclasses import dataclass
 
+
 @dataclass(kw_only=True)
 class OperandString:
     left: str = ""
@@ -12,10 +13,11 @@ class OperandString:
     middle: str = ""
 
     def reverse(self) -> Self:
-        return type(self)(left="".join(reversed(self.right)),
-                          middle="".join(reversed(self.middle)),
-                          right="".join(reversed(self.left)))
+        return type(self)(
+            left="".join(reversed(self.right)),
+            middle="".join(reversed(self.middle)),
+            right="".join(reversed(self.left)),
+        )
 
     def __str__(self) -> str:
         return f"{self.left}{self.middle}{self.right}"
-

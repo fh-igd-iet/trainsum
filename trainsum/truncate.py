@@ -7,6 +7,7 @@ from .trainbase import TrainBase
 from .utils import symbol_generator
 from .einsum import einsum
 
+
 def truncate[T: ArrayLike](train1: TrainBase[T]) -> TrainBase[T]:
     sgen = symbol_generator()
     chars = "".join(next(sgen) for _ in range(len(train1.shape.dims)))

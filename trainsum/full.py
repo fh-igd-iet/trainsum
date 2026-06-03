@@ -6,7 +6,10 @@ from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .backend import ArrayNamespace, ArrayLike, ArrayNamespace
 
-def full[T: ArrayLike](xp: ArrayNamespace[T], shape: TrainShape, value: float) -> TrainBase[T]:
+
+def full[T: ArrayLike](
+    xp: ArrayNamespace[T], shape: TrainShape, value: float
+) -> TrainBase[T]:
     data = []
     for i in range(len(shape)):
         data.append(xp.ones((1, *shape.middle(i), 1)))

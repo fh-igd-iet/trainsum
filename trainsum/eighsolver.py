@@ -4,11 +4,13 @@
 
 from .backend import ArrayLike, namespace_of_arrays
 
+
 class EigHSolver:
     def __call__[T: ArrayLike](self, mat: T) -> tuple[T, T]:
         xp = namespace_of_arrays(mat)
         if not hasattr(xp, "linalg"):
             raise NotImplementedError(
-                f"Extension linalg is missing from namespace {xp}.")
+                f"Extension linalg is missing from namespace {xp}."
+            )
         vals, vecs = xp.linalg.eigh(mat)
         return vals, vecs

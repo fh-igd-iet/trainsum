@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from .dimension import Dimension
 from .trainshape import TrainShape, change_dims
 
+
 @dataclass(frozen=True)
 class EinsumEquation:
     result: str
@@ -32,7 +33,10 @@ class EinsumEquation:
     def __str__(self) -> str:
         return ",".join(self.operands) + f"->{self.result}"
 
-def _dimension_mapping(op_strs: Sequence[str], *ops: TrainShape) -> dict[str, Dimension]:
+
+def _dimension_mapping(
+    op_strs: Sequence[str], *ops: TrainShape
+) -> dict[str, Dimension]:
     """Create a mapping from einsum equation characters to dimensions of the operands."""
     dims = {}
     for op_str, op in zip(op_strs, ops):
@@ -42,9 +46,10 @@ def _dimension_mapping(op_strs: Sequence[str], *ops: TrainShape) -> dict[str, Di
             dims[op_char] = Dimension([d.base for d in dim])
     return dims
 
-def _einsum_operands(op_strs: Sequence[str], 
-                     ops: Sequence[TrainShape],
-                     dim_mapping: dict[str, Dimension]) -> tuple[TrainShape]:
+
+def _einsum_operands(
+    op_strs: Sequence[str], ops: Sequence[TrainShape], dim_mapping: dict[str, Dimension]
+) -> tuple[TrainShape]:
     """Create einsum operands with correct dimensions based on the dimension mapping."""
     nops = []
     for op_str, op in zip(op_strs, ops):
@@ -52,6 +57,7 @@ def _einsum_operands(op_strs: Sequence[str],
         nop = change_dims(op, op_dims)
         nops.append(nop)
     return tuple(nops)
+
 
 def _check_equation(ops: Sequence[str], res: str) -> None:
     """Check the validity of an einsum equation."""
@@ -69,7 +75,7 @@ def _check_equation(ops: Sequence[str], res: str) -> None:
         if len_ops == len(op_list):
             raise ValueError("Disjoint einsum graphs are not allowed.")
 
-    if any(char not in ''.join(ops) for char in res):
+    if any(char not in "".join(ops) for char in res):
         raise ValueError("Result dimensions must appear in at least one operand.")
 
     for op in [*ops, res]:
@@ -80,9 +86,11 @@ def _check_equation(ops: Sequence[str], res: str) -> None:
 def _check_dimensions(op_strs: Sequence[str], ops: Sequence[TrainShape]) -> None:
     """Check if the operand dimensions are compatible with the einsum equation and with each other."""
     if len(op_strs) != len(ops):
-        raise ValueError(f"Number of provided operands in the equation "\
-                         f"({len(op_strs)}) and in the function call "\
-                         f"({len(ops)}) do not match")
+        raise ValueError(
+            f"Number of provided operands in the equation "
+            f"({len(op_strs)}) and in the function call "
+            f"({len(ops)}) do not match"
+        )
     dim_map = {}
     for i, (str_op, op) in enumerate(zip(op_strs, ops)):
         if len(str_op) != len(op.dims):
@@ -92,4 +100,3 @@ def _check_dimensions(op_strs: Sequence[str], ops: Sequence[TrainShape]) -> None
                 raise ValueError(f"Dimension mismatch in dimension {op_char}.")
             else:
                 dim_map[op_char] = dim
-

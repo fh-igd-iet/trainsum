@@ -19,20 +19,23 @@ from .einsumequation import EinsumEquation
 from .innergenerator import InnerGenerator
 from .generatorcallabletype import GeneratorCallableType
 
-class VariationalContractor:
 
+class VariationalContractor:
     optimizer: OptimizeKind
     decomposition: MatrixDecomposition
     strategy: SweepingStrategy
 
-    def __init__(self,
-                 contr: EinsumContraction,
-                 optimizer: OptimizeKind = "greedy",
-                 decomposition: MatrixDecomposition = SVDecomposition(),
-                 strategy: SweepingStrategy = SweepingStrategy()) -> None:
-
+    def __init__(
+        self,
+        contr: EinsumContraction,
+        optimizer: OptimizeKind = "greedy",
+        decomposition: MatrixDecomposition = SVDecomposition(),
+        strategy: SweepingStrategy = SweepingStrategy(),
+    ) -> None:
         if contr.result_shape is None or contr.full_result_shape is None:
-            raise ValueError("Variational contractor cannot be used for full ccontractions. Use FullContractor instead.")
+            raise ValueError(
+                "Variational contractor cannot be used for full ccontractions. Use FullContractor instead."
+            )
 
         self.optimizer = deepcopy(optimizer)
         self.decomposition = deepcopy(decomposition)
@@ -40,10 +43,8 @@ class VariationalContractor:
         self._inner_gen = self._get_inner_generator(contr, optimizer)
 
     def __call__[T: ArrayLike](
-            self,
-            guess: TrainBase[T],
-            *operands: TrainBase[T],
-            expr: bool = False) -> TrainBase[T]:
+        self, guess: TrainBase[T], *operands: TrainBase[T], expr: bool = False
+    ) -> TrainBase[T]:
         xp = namespace_of_trains(guess, *operands)
         guess = deepcopy(guess)
         igen = self._inner_gen(guess, *operands, expr=expr)
@@ -59,17 +60,14 @@ class VariationalContractor:
         return guess
 
     def calc_expressions(
-            self,
-            guess: TrainShape | TrainBase,
-            *ops: TrainShape | TrainBase) -> None:
+        self, guess: TrainShape | TrainBase, *ops: TrainShape | TrainBase
+    ) -> None:
         guess_shape = guess.shape if isinstance(guess, TrainBase) else guess
         self._inner_gen.calc_expressions(self.strategy, guess_shape, *ops)
 
     def _get_inner_generator(
-            self,
-            contr: EinsumContraction,
-            optimizer: OptimizeKind
-            ) -> InnerGenerator:
+        self, contr: EinsumContraction, optimizer: OptimizeKind
+    ) -> InnerGenerator:
         eq = f"{contr.equation.result}," + ",".join(contr.equation.operands) + "->"
         ops = [contr.result_shape, *contr.equation.shapes]
         eq = EinsumEquation(eq, *ops)

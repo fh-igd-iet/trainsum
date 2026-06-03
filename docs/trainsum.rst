@@ -20,6 +20,7 @@ Basics
    TrainSum.uniform_grid
    TrainSum.trainshape
    TrainSum.svdecomposition
+   TrainSum.rand_svdecomposition
    TrainSum.qrdecomposition
    TrainSum.sweeping_strategy
 
@@ -36,8 +37,33 @@ Construction
    TrainSum.cos
    TrainSum.polyval
    TrainSum.shift
+   TrainSum.slice_vector
+   TrainSum.slice_operator
    TrainSum.toeplitz
    TrainSum.tensortrain
+
+Binary Tensor Trains
+--------------------
+
+.. autosummary::
+   :toctree: Trainsum/methods
+   :nosignatures:
+
+   TrainSum.linear_integer_equation
+   TrainSum.modulo_integer_equation
+   TrainSum.range_integer_equation
+   TrainSum.binary_train
+
+Discrete Wavelet Transform
+--------------------------
+
+.. autosummary::
+   :toctree: Trainsum/methods
+   :nosignatures:
+
+   TrainSum.dwt
+   TrainSum.idwt
+
 
 Fourier Transform
 -----------------
@@ -80,6 +106,7 @@ Operations
    :toctree: Trainsum/methods
    :nosignatures:
 
+   TrainSum.outer
    TrainSum.min_max
    TrainSum.add
    TrainSum.einsum

@@ -10,8 +10,8 @@ from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .evaluationexpression import EvaluationExpression as _EvaluationExpression
 
-class EvaluateExpression[T: ArrayLike]:
 
+class EvaluateExpression[T: ArrayLike]:
     _expr: Callable
 
     def __init__(
@@ -19,18 +19,17 @@ class EvaluateExpression[T: ArrayLike]:
         xp: ArrayNamespace[T],
         eq: str,
         *ops: TrainShape,
-        ) -> None:
+    ) -> None:
         opts = get_options(xp, OptionType.EVALUATE)
         self._expr = _EvaluationExpression(
-                eq, *ops,
-                chunk_size=opts.chunk_size,
-                optimizer=opts.optimizer)
+            eq, *ops, chunk_size=opts.chunk_size, optimizer=opts.optimizer
+        )
 
     def __call__(
-            self,
-            idxs: T,
-            *ops: TrainBase[T],
-            ) -> T:
+        self,
+        idxs: T,
+        *ops: TrainBase[T],
+    ) -> T:
         return self._expr(idxs, *ops)
 
 

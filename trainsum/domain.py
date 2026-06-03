@@ -2,7 +2,7 @@
 # acting on behalf of its Fraunhofer Institut für Graphische Datenverarbeitung.
 # Licensed under the EUPL. See LICENSE.txt.
 
-class Domain:                                                                                                                       
+class Domain:
     """Domnain of a variable, defined by a lower and upper bound."""
 
     _lower: float
@@ -29,9 +29,11 @@ class Domain:
         self._diff = upper - lower
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Domain)\
-               and self.lower == other.lower\
-               and self.upper == other.upper
-    
+        return (
+            isinstance(other, Domain)
+            and self.lower == other.lower
+            and self.upper == other.upper
+        )
+
     def __str__(self) -> str:
         return f"Domain({self.lower}, {self.upper})"

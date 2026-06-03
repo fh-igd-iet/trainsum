@@ -4,15 +4,15 @@ from math import prod
 from trainsum.digit import Digit
 from utils import prime_factorization
 
-class TestDigit(unittest.TestCase):
 
+class TestDigit(unittest.TestCase):
     def setUp(self) -> None:
         idfs = [0, 1, 2]
         sizes = [6, 10, 15]
         self.digits = []
         for idf, size in zip(idfs, sizes):
             bases = prime_factorization(size)
-            factors = [prod(bases[i+1:]) for i in range(len(bases))]
+            factors = [prod(bases[i + 1 :]) for i in range(len(bases))]
             for i in range(len(bases)):
                 self.digits.append(Digit(idf, i, bases[i], factors[i]))
 
@@ -32,7 +32,8 @@ class TestDigit(unittest.TestCase):
 
     def test_hash(self):
         self.assertEqual(len(self.digits), len(set(self.digits)))
-        self.assertEqual(len(self.digits), len(set(self.digits+self.digits)))
+        self.assertEqual(len(self.digits), len(set(self.digits + self.digits)))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

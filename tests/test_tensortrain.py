@@ -7,8 +7,8 @@ from trainsum import TrainSum
 from trainsum.typing import UniformGrid, TrainShape
 from utils import backends, rand_data
 
-class TestTensorTrain(unittest.TestCase):
 
+class TestTensorTrain(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [(120,), (280,), (1024,), (120, 1024), (324, 120)]
@@ -20,13 +20,18 @@ class TestTensorTrain(unittest.TestCase):
 
     def get_idxs(self, ts, grid: UniformGrid):
         xp = ts.namespace
-        idxs = xp.zeros([len(grid.dims), *[dim.size() for dim in grid.dims]],
-                        dtype=ts.index_type)
+        idxs = xp.zeros(
+            [len(grid.dims), *[dim.size() for dim in grid.dims]], dtype=ts.index_type
+        )
         for i, dim in enumerate(grid.dims):
-            cut = (*(xp.newaxis,) * i, slice(None), *(xp.newaxis,) * (len(grid.dims) - i - 1))
+            cut = (
+                *(xp.newaxis,) * i,
+                slice(None),
+                *(xp.newaxis,) * (len(grid.dims) - i - 1),
+            )
             idxs[i] += xp.arange(dim.size(), dtype=ts.index_type)[cut]
         return idxs
-    
+
     def rand_cores(self, ts: TrainSum, shape: TrainShape):
         xp = ts.namespace
         cores = []
@@ -40,7 +45,7 @@ class TestTensorTrain(unittest.TestCase):
         xp = ts.namespace
         tmp = xp.ones((1, 1))
         for i in range(idx):
-            idxs = [i+1 for i in range(len(train.shape.middle(i)))]
+            idxs = [i + 1 for i in range(len(train.shape.middle(i)))]
             mid = xp.tensordot(train.cores[i], train.cores[i], axes=(idxs, idxs))
             tmp = xp.tensordot(tmp, mid, axes=([0, 1], [0, 2]))
         return tmp
@@ -48,12 +53,11 @@ class TestTensorTrain(unittest.TestCase):
     def right_contract(self, ts: TrainSum, train: Any, idx: int):
         xp = ts.namespace
         tmp = xp.ones((1, 1))
-        for i in range(len(train.shape)-1, idx+1, -1):
-            idxs = [i+1 for i in range(len(train.shape.middle(i)))]
+        for i in range(len(train.shape) - 1, idx + 1, -1):
+            idxs = [i + 1 for i in range(len(train.shape.middle(i)))]
             mid = xp.tensordot(train.cores[i], train.cores[i], axes=(idxs, idxs))
             tmp = xp.tensordot(mid, tmp, axes=([1, 3], [0, 1]))
         return tmp
-
 
     def test_extend(self) -> None:
         for ts, sizes1, sizes2 in product(self.trainsum, self.sizes, self.sizes):
@@ -71,7 +75,9 @@ class TestTensorTrain(unittest.TestCase):
             res.extend(train2)
             core_iter = iter(res.cores)
 
-            self.assertEqual(list(train1.shape.dims) + list(train2.shape.dims), res.shape.dims)
+            self.assertEqual(
+                list(train1.shape.dims) + list(train2.shape.dims), res.shape.dims
+            )
             for core in train1.cores:
                 self.assertTrue(xp.all(xp.equal(core, next(core_iter))))
             for core in train2.cores:
@@ -107,12 +113,12 @@ class TestTensorTrain(unittest.TestCase):
 
                 left = self.left_contract(ts, train, i)
                 eye_left = xp.eye(left.shape[0])
-                diff = xp.sum((left - eye_left)**2)
+                diff = xp.sum((left - eye_left) ** 2)
                 self.assertLess(diff, 1e-7)
 
                 right = self.right_contract(ts, train, i)
                 eye_right = xp.eye(right.shape[0])
-                diff = xp.sum((right - eye_right)**2)
+                diff = xp.sum((right - eye_right) ** 2)
                 self.assertLess(diff, 1e-7)
 
     def test_truncate(self) -> None:
@@ -147,8 +153,32 @@ class TestTensorTrain(unittest.TestCase):
 
             exact = func(train.to_tensor())
             approx = res.to_tensor()
-            diff = xp.sum((exact - approx)**2) / xp.sum(exact**2)
+            diff = xp.sum((exact - approx) ** 2) / xp.sum(exact**2)
             self.assertLess(diff, 1e-5)
+
+    def test_assign(self) -> None:
+        for ts, sizes in product(self.trainsum, self.sizes):
+            xp = ts.namespace
+            shape = ts.trainshape(*sizes, mode="block")
+            cores = self.rand_cores(ts, shape)
+            train = ts.tensortrain(shape, cores)
+
+            for i in [2, 4]:
+
+                sl = [slice(16, None, i) for _ in sizes]
+    
+                exact = train.to_tensor()
+                exact[*sl] = exact[*sl]**2
+
+                decomp = ts.qrdecomposition()
+                with ts.decomposition(decomposition=decomp):
+                    sl_train = train[*sl]**2
+                    train[*sl] = sl_train
+                approx = train.to_tensor()
+
+                diff = xp.sum((exact - approx) ** 2) / xp.sum(exact**2)
+                self.assertLess(diff, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

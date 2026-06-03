@@ -25,8 +25,8 @@ from .contractor import OptimizeKind, DEFAULT_OPTIMIZER
 from .generatorcallabletype import GeneratorCallableType
 from .operationspace import einsum_operation_shape
 
-class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
 
+class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
     solver: LocalLinSolver[S]
     decomposition: MatrixDecomposition
     strategy: SweepingStrategy
@@ -36,13 +36,14 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
     _rhs: TrainBase[T]
 
     def __init__(
-            self,
-            solver: LocalLinSolver[S],
-            rhs: TrainBase[T],
-            *maps: LinearMap[T],
-            decomposition: MatrixDecomposition = SVDecomposition(),
-            strategy: SweepingStrategy = SweepingStrategy(),
-            optimizer: OptimizeKind = DEFAULT_OPTIMIZER) -> None:
+        self,
+        solver: LocalLinSolver[S],
+        rhs: TrainBase[T],
+        *maps: LinearMap[T],
+        decomposition: MatrixDecomposition = SVDecomposition(),
+        strategy: SweepingStrategy = SweepingStrategy(),
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+    ) -> None:
         self.solver = deepcopy(solver)
         self.decomposition = deepcopy(decomposition)
         self.strategy = deepcopy(strategy)
@@ -52,11 +53,11 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
         self._rhs_gen = self._get_gen(rhs.shape)
 
     def __call__(
-            self,
-            guess: TrainBase[T],
-            expr: bool = False,
-            callback: Optional[Callable[[LocalRange, S], bool]] = None,
-            ) -> TrainBase[T]:
+        self,
+        guess: TrainBase[T],
+        expr: bool = False,
+        callback: Optional[Callable[[LocalRange, S], bool]] = None,
+    ) -> TrainBase[T]:
         guess = deepcopy(guess)
         gen = self._gen(guess, expr)
         next(gen)  # warm up
@@ -68,10 +69,10 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
         return guess
 
     def _gen(
-            self,
-            guess: TrainBase[T],
-            expr: bool,
-            ) -> Generator[S, LocalRange]:
+        self,
+        guess: TrainBase[T],
+        expr: bool,
+    ) -> Generator[S, LocalRange]:
         xp = namespace_of_trains(guess)
 
         lvec = local_vector(guess, self.decomposition)
@@ -83,12 +84,12 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
         data = xp.empty(0)
         try:
             while True:
-                lrange = yield loc_res # type: ignore
+                lrange = yield loc_res  # type: ignore
                 vec = lvec.send((lrange, data))
                 funcs = [gen.send((lrange, gen_type)) for gen in map_gens]
                 func = lambda x: sum((f(x) for f in funcs[1:]), start=funcs[0](x))
                 lrhs = rhs_gen.send((lrange, gen_type))
-                loc_res = self.solver(func, lrhs, vec) # type: ignore
+                loc_res = self.solver(func, lrhs, vec)  # type: ignore
                 data = loc_res.array
         finally:
             for gen in map_gens:
@@ -97,7 +98,7 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
             rhs_gen.close()
 
     def _get_gen(self, state: TrainShape) -> InnerGenerator:
-        dims = ascii_lowercase[:len(state.dims)]
+        dims = ascii_lowercase[: len(state.dims)]
         eq = EinsumEquation(f"{dims},{dims}->{dims}", state, state)
         op_shape = einsum_operation_shape(eq)
         eq_ = EinsumEquation(f"{dims},{dims}->", state, state)
@@ -106,5 +107,7 @@ class LinSolver[T: ArrayLike, S: LocalLinSolverResult]:
             for in_dim, out_dim in zip(in_shape.dims, out_shape.dims):
                 dim_map[in_dim] = out_dim
         new_op_shape_dims = [dim_map[dim] for dim in op_shape.dims]
-        contr = EinsumContraction(eq_, op_shape=change_dims(op_shape, new_op_shape_dims))
+        contr = EinsumContraction(
+            eq_, op_shape=change_dims(op_shape, new_op_shape_dims)
+        )
         return InnerGenerator(contr, 0, self.optimizer)

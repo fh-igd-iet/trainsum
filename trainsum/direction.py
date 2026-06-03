@@ -4,6 +4,7 @@
 
 from enum import Enum
 
+
 class Direction(Enum):
     TO_LEFT = 1
     TO_RIGHT = 2

@@ -12,8 +12,8 @@ from .tensordecomposition import TensorDecomposition
 from .normalization import Normalization
 from .trainshape import TrainShape, transform_index
 
-class TrainBase[T: ArrayLike]:
 
+class TrainBase[T: ArrayLike]:
     _shape: TrainShape
     _data: list[T]
     _device: Any
@@ -23,6 +23,7 @@ class TrainBase[T: ArrayLike]:
     @property
     def device(self) -> Any:
         return self._device
+
     @device.setter
     def device(self, device: Any) -> None:
         self._device = device
@@ -32,6 +33,7 @@ class TrainBase[T: ArrayLike]:
     @property
     def dtype(self) -> Any:
         return self._dtype
+
     @dtype.setter
     def dtype(self, dtype: Any) -> None:
         self._dtype = dtype
@@ -48,11 +50,13 @@ class TrainBase[T: ArrayLike]:
     def data(self) -> Sequence[T]:
         return self._data
 
-    def __init__(self,
-                 shape: TrainShape,
-                 data: Sequence[T],
-                 norm: Optional[Sequence[Normalization]] = None,
-                 copy_data: bool = True) -> None:
+    def __init__(
+        self,
+        shape: TrainShape,
+        data: Sequence[T],
+        norm: Optional[Sequence[Normalization]] = None,
+        copy_data: bool = True,
+    ) -> None:
         self._check_shape_vs_data(shape, data)
         self._check_dtype_and_device(data)
         self._check_ranks(data)
@@ -68,24 +72,30 @@ class TrainBase[T: ArrayLike]:
         self._norm = list(norm)
 
     @overload
-    def set_data(self,
-                 idx: int,
-                 data: T, /,
-                 norm: Optional[Normalization] = None) -> None: ...
+    def set_data(
+        self, idx: int, data: T, /, norm: Optional[Normalization] = None
+    ) -> None: ...
     @overload
-    def set_data(self,
-                 cut: slice,
-                 data: Sequence[T], /,
-                 norm: Optional[Sequence[Normalization]] = None) -> None: ...
+    def set_data(
+        self,
+        cut: slice,
+        data: Sequence[T],
+        /,
+        norm: Optional[Sequence[Normalization]] = None,
+    ) -> None: ...
     # implementation
-    def set_data(self,
-                 idx: int | slice,
-                 data: T | Sequence[T], /,
-                 norm: Optional[Normalization | Sequence[Normalization]] = None
-                 ) -> None:
-        if isinstance(idx, int)\
-        and isinstance(data, type(self._data[0]))\
-        and isinstance(norm, (Normalization, type(None))):
+    def set_data(
+        self,
+        idx: int | slice,
+        data: T | Sequence[T],
+        /,
+        norm: Optional[Normalization | Sequence[Normalization]] = None,
+    ) -> None:
+        if (
+            isinstance(idx, int)
+            and isinstance(data, type(self._data[0]))
+            and isinstance(norm, (Normalization, type(None)))
+        ):
             if idx < 0 or idx >= len(self._data):
                 raise IndexError("Core index out of range.")
             if data.shape != self._data[idx].shape:
@@ -94,13 +104,17 @@ class TrainBase[T: ArrayLike]:
             if norm is None:
                 norm = Normalization.NONE
             self._norm[idx] = norm
-        elif not isinstance(idx, int)\
-        and not isinstance(data, type(self._data[0]))\
-        and not isinstance(norm, Normalization):
-            self._data[idx] = list(data) # type: ignore
-            for i in range(idx.start, idx.stop-1):
-                if self._data[i].shape[-1] != self._data[i+1].shape[0]:
-                    raise ValueError(f"Core ranks do not match between adjacent cores at position {i}.")
+        elif (
+            not isinstance(idx, int)
+            and not isinstance(data, type(self._data[0]))
+            and not isinstance(norm, Normalization)
+        ):
+            self._data[idx] = list(data)  # type: ignore
+            for i in range(idx.start, idx.stop - 1):
+                if self._data[i].shape[-1] != self._data[i + 1].shape[0]:
+                    raise ValueError(
+                        f"Core ranks do not match between adjacent cores at position {i}."
+                    )
             if norm is None:
                 norm = [Normalization.NONE for _ in range(idx.stop - idx.start)]
             self._norm[idx] = norm
@@ -110,9 +124,9 @@ class TrainBase[T: ArrayLike]:
     def normalize(self, begin: int, end: Optional[int] = None) -> None:
         begin = transform_index(begin, len(self._data))
         if end is None:
-            end = begin+1
+            end = begin + 1
         else:
-            end = transform_index(end-1, len(self._data))+1
+            end = transform_index(end - 1, len(self._data)) + 1
         if end < begin or end > len(self._data):
             raise IndexError("End index out of range.")
 
@@ -122,16 +136,14 @@ class TrainBase[T: ArrayLike]:
         for i in range(begin):
             res = qr.left(self._data[i], -1)
             self._data[i], r = res.left, res.right
-            idx = len(r.shape)-1
-            self._data[i+1] = xp.tensordot(r, self._data[i+1],
-                                           axes=([idx], [0]))
-        for i in range(len(self._data)-1, end-1, -1):
+            idx = len(r.shape) - 1
+            self._data[i + 1] = xp.tensordot(r, self._data[i + 1], axes=([idx], [0]))
+        for i in range(len(self._data) - 1, end - 1, -1):
             res = qr.right(self._data[i], 1)
-            l, self._data[i] =  res.left, res.right
-            idx = len(self._data[i-1].shape)-1
-            self._data[i-1] = xp.tensordot(self._data[i-1], l,
-                                           axes=([idx], [0]))
-    
+            l, self._data[i] = res.left, res.right
+            idx = len(self._data[i - 1].shape) - 1
+            self._data[i - 1] = xp.tensordot(self._data[i - 1], l, axes=([idx], [0]))
+
     def reverse(self) -> None:
         xp = namespace_of_arrays(self._data[0])
         self._data.reverse()
@@ -141,15 +153,22 @@ class TrainBase[T: ArrayLike]:
         self._shape = self._shape.reverse()
         self._norm.reverse()
 
-    def extend(self, train: Self, /) -> Self:
-        dims = [*self.shape.dims, *train.shape.dims]
-        digits = [*self.shape.digits, *train.shape.digits]
-        shape = TrainShape(dims, digits)
-        data = [*self.data, *train.data]
-        self._base = TrainBase(shape, data)
-        return self
+    def extend(self, *trains: Self, copy_data: bool = True) -> None:
+        self._shape.extend(*(train._shape for train in trains))
+        for train in trains:
+            for data in train._data:
+                if copy_data:
+                    self._data.append(deepcopy(data))
+                else:
+                    self._data.append(data)
 
-    def _check_shape_vs_data(self, shape: TrainShape, data: Sequence[ArrayLike]) -> None:
+    def permute_dims(self, order: Sequence[int]) -> None:
+        """Permute the dimensions of the shape according to the given order."""
+        self._shape.permute_dims(order)
+
+    def _check_shape_vs_data(
+        self, shape: TrainShape, data: Sequence[ArrayLike]
+    ) -> None:
         if len(shape) != len(data):
             raise ValueError("Number of cores in shape and data must match.")
         for i, dat in enumerate(data):
@@ -166,9 +185,10 @@ class TrainBase[T: ArrayLike]:
                 raise ValueError("All core tensors must have the same dtype.")
 
     def _check_ranks(self, data: Sequence[ArrayLike]) -> None:
-        for i in range(len(data)-1):
-            if data[i].shape[-1] != data[i+1].shape[0]:
-                raise ValueError(f"Core ranks do not match between adjacent cores at position {i}.")
+        for i in range(len(data) - 1):
+            if data[i].shape[-1] != data[i + 1].shape[0]:
+                raise ValueError(
+                    f"Core ranks do not match between adjacent cores at position {i}."
+                )
         if data[0].shape[0] != 1 or data[-1].shape[-1] != 1:
             raise ValueError("First and last cores must have rank 1 on the outside")
-

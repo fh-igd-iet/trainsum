@@ -13,6 +13,7 @@ from .digit import Digit, digits_similar
 from .sequenceof import SequenceOf
 from .backend import get_index_dtype
 
+
 @dataclass(frozen=True, init=False)
 class Dimension[T: ArrayLike](SequenceOf[Digit]):
     """
@@ -21,26 +22,22 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
     will be used as the bases of the digits.
     """
 
-    #-------------------------------------------------------------------------
-    #private members
+    # -------------------------------------------------------------------------
+    # private members
 
     #: The identifier of the dimension, shared by all digits in the dimension.
     idf: int
 
-    #-------------------------------------------------------------------------
-    #constructor
+    # -------------------------------------------------------------------------
+    # constructor
 
     @overload
-    def __init__(self,
-                 size: int, /,
-                 idf: int | NoneType = None) -> None: ...
+    def __init__(self, size: int, /, idf: int | NoneType = None) -> None: ...
     @overload
-    def __init__(self,
-                 bases: Sequence[int], /,
-                 idf: int | NoneType = None) -> None: ...
-    def __init__(self,
-                 size: int | Sequence[int], /,
-                 idf: int | NoneType = None) -> None:
+    def __init__(self, bases: Sequence[int], /, idf: int | NoneType = None) -> None: ...
+    def __init__(
+        self, size: int | Sequence[int], /, idf: int | NoneType = None
+    ) -> None:
         if isinstance(size, int):
             bases = prime_factorization(size)
         else:
@@ -51,7 +48,7 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         object.__setattr__(self, "idf", idf)
 
         self._check_bases(bases)
-        factors = [prod(bases[i+1:]) for i in range(len(bases))]
+        factors = [prod(bases[i + 1 :]) for i in range(len(bases))]
         digits = []
         for i, base, factor in zip(range(len(bases)), bases, factors):
             digits.append(Digit(idf, i, base, factor))
@@ -63,8 +60,8 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         if any(b < 2 for b in bases):
             raise ValueError("All bases must be at least 2")
 
-    #-------------------------------------------------------------------------
-    #methods
+    # -------------------------------------------------------------------------
+    # methods
 
     def size(self) -> int:
         """Calculate the size of the dimension, i.e., the product of the bases of all digits."""
@@ -79,10 +76,10 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         self._check_dtype(int_type, digits)
         if digits.shape[0] != len(self):
             raise ValueError(f"Expect a tensor of shape ({len(self)}, ...)")
-        trans = xp.asarray([d.factor for d in self],
-                            dtype=int_type,
-                            device=device(digits))
-        idxs = digits * xp.reshape(trans, (len(self), *[1]*(len(digits.shape)-1)))
+        trans = xp.asarray(
+            [d.factor for d in self], dtype=int_type, device=device(digits)
+        )
+        idxs = digits * xp.reshape(trans, (len(self), *[1] * (len(digits.shape) - 1)))
         return xp.sum(idxs, axis=0)
 
     def to_digits(self, idxs: T) -> T:
@@ -92,12 +89,10 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         xp = namespace_of_arrays(idxs)
         int_type = get_index_dtype(xp)
         self._check_dtype(int_type, idxs)
-        digits = xp.zeros((len(self), *idxs.shape),
-                          dtype=int_type,
-                          device=device(idxs))
+        digits = xp.zeros((len(self), *idxs.shape), dtype=int_type, device=device(idxs))
         idxs = deepcopy(idxs)
         for i, digit in enumerate(reversed(self)):
-            digits[(len(self)-i-1, ...)] = idxs % digit.base
+            digits[(len(self) - i - 1, ...)] = idxs % digit.base
             idxs = idxs // digit.base
         return digits
 
@@ -105,8 +100,8 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         if inp.dtype != index_dtype:
             raise ValueError(f"Input should have dtype={index_dtype}")
 
-    #-------------------------------------------------------------------------
-    #some magic
+    # -------------------------------------------------------------------------
+    # some magic
 
     def __str__(self) -> str:
         return f"Dimension({str([d.base for d in self])})"
@@ -115,14 +110,21 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         return hash((*self[:],))
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, Dimension)\
-           and len(self) == len(other)\
-           and all(digits_similar(d1, d2) for d1, d2 in zip(self, other))
+        return (
+            isinstance(other, Dimension)
+            and len(self) == len(other)
+            and all(digits_similar(d1, d2) for d1, d2 in zip(self, other))
+        )
+
+
 _idf = 0
+
+
 def unique_identifier() -> int:
     global _idf
     _idf += 1
     return _idf
+
 
 def prime_factorization(num: int) -> Sequence[int]:
     facs = []
@@ -136,7 +138,9 @@ def prime_factorization(num: int) -> Sequence[int]:
         facs.append(num)
     return facs
 
+
 Dimensions = Sequence[Dimension]
+
 
 def dimensions_similar(dim1: Dimension, dim2: Dimension) -> bool:
     return all(digits_similar(d1, d2) for d1, d2 in zip(dim1, dim2))

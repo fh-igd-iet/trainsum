@@ -7,8 +7,8 @@ from types import EllipsisType
 
 from .backend import Device, DType, ArrayLike, shape
 
-class StorageTensor[T: ArrayLike]:
 
+class StorageTensor[T: ArrayLike]:
     _data: T
     _shape: list[int]
     _cut: list[slice]
@@ -16,14 +16,22 @@ class StorageTensor[T: ArrayLike]:
 
     def __init__(self, storage: T) -> None:
         self._data = storage
-        self._shape = [0]*len(storage.shape)
-        self._cut = [slice(0,0)]*len(storage.shape)
+        self._shape = [0] * len(storage.shape)
+        self._cut = [slice(0, 0)] * len(storage.shape)
         self._view = self._data[*self._cut]
 
-    def __getitem__(self, idx: int | slice | EllipsisType | T | Sequence[int | slice | EllipsisType | T], /) -> T:
+    def __getitem__(
+        self,
+        idx: int | slice | EllipsisType | T | Sequence[int | slice | EllipsisType | T],
+        /,
+    ) -> T:
         return self._view[idx]
 
-    def __setitem__(self, idx: int | slice | EllipsisType | T | Sequence[int | slice | EllipsisType | T], value: float | T) -> None:
+    def __setitem__(
+        self,
+        idx: int | slice | EllipsisType | T | Sequence[int | slice | EllipsisType | T],
+        value: float | T,
+    ) -> None:
         self._view[idx] = value
 
     @property
@@ -43,7 +51,7 @@ class StorageTensor[T: ArrayLike]:
         return self._data.device
 
     def add_to_dim(self, dim: int, size: int) -> None:
-        size = self._shape[dim]+size
+        size = self._shape[dim] + size
         if size > shape(self._data)[dim]:
             raise ValueError("Exceeding maximum size")
         self._shape[dim] = size

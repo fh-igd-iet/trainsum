@@ -23,7 +23,6 @@ from .localcontraction import fuse_local_contractions, LocalContraction
 from .contains import contains
 
 class DecompositionContractor:
-
     optimizer: OptimizeKind
     decomposition: MatrixDecomposition
     strategy: SweepingStrategy
@@ -32,22 +31,27 @@ class DecompositionContractor:
     _inp: None | ContractorInput = None
     _tmp_str: str
     _cmap: Sequence[int]
-    _to_right_exprs: dict[tuple[int, LocalRange],
-                          tuple[LocalContraction, ArrayContractor]]
+    _to_right_exprs: dict[
+        tuple[int, LocalRange], tuple[LocalContraction, ArrayContractor]
+    ]
     _to_right_tranges: list[LocalRange]
-    _to_left_exprs: dict[tuple[LocalRange, int],
-                         tuple[LocalContraction, ArrayContractor]]
+    _to_left_exprs: dict[
+        tuple[LocalRange, int], tuple[LocalContraction, ArrayContractor]
+    ]
     _to_left_tranges: list[LocalRange]
 
-    def __init__(self,
-                 contr: EinsumContraction,
-                 optimizer: OptimizeKind = "greedy",
-                 decomposition: MatrixDecomposition = SVDecomposition(),
-                 strategy: SweepingStrategy = SweepingStrategy(),
-                 direction: Direction = Direction.TO_RIGHT) -> None:
-
+    def __init__(
+        self,
+        contr: EinsumContraction,
+        optimizer: OptimizeKind = "greedy",
+        decomposition: MatrixDecomposition = SVDecomposition(),
+        strategy: SweepingStrategy = SweepingStrategy(),
+        direction: Direction = Direction.TO_RIGHT,
+    ) -> None:
         if contr.result_shape is None or contr.full_result_shape is None:
-            raise ValueError("DecompositionContractor cannot be used for full ccontractions. Use FullContractor instead.")
+            raise ValueError(
+                "DecompositionContractor cannot be used for full contractions. Use FullContractor instead."
+            )
 
         self.optimizer = deepcopy(optimizer)
         self.decomposition = deepcopy(decomposition)
@@ -65,9 +69,9 @@ class DecompositionContractor:
         self._to_left_exprs = {}
         self._to_left_tranges = []
 
-    def __call__[T: ArrayLike](self,
-            *ops: TrainBase[T],
-            expr: bool = False) -> TrainBase[T]:
+    def __call__[T: ArrayLike](
+        self, *ops: TrainBase[T], expr: bool = False
+    ) -> TrainBase[T]:
         shapes = get_shapes(*ops)
         if expr or self._inp is None:
             self.calc_expressions(*shapes)
@@ -82,7 +86,9 @@ class DecompositionContractor:
             return self._contract_to_left(self.decomposition, *ops)
         raise ValueError("Direction must be either 'to_left' or 'to_right'.")
 
-    def calc_expressions(self, *ops: TrainShape | TrainBase) -> tuple[TrainShape, TrainShape]:
+    def calc_expressions(
+        self, *ops: TrainShape | TrainBase
+    ) -> tuple[TrainShape, TrainShape]:
         check_operand_shapes(self._contr.operand_shapes, get_shapes(*ops))
         self._inp = ContractorInput(*ops)
 
@@ -99,9 +105,8 @@ class DecompositionContractor:
     # Contraction generators
 
     def _contract_to_right[T: ArrayLike](
-            self,
-            decomp: MatrixDecomposition,
-            *ops: TrainBase[T]) -> TrainBase[T]:
+        self, decomp: MatrixDecomposition, *ops: TrainBase[T]
+    ) -> TrainBase[T]:
         if self._inp is None:
             raise RuntimeError("Input cannot be None here.")
         xp, device, dtype = self._inp.infos(*ops)
@@ -115,21 +120,22 @@ class DecompositionContractor:
 
         lidx = 0
         idx = 0
-        tmp = xp.ones([1, *[1]*len(self._contr[0].result.left)],
-                      device=device, dtype=dtype)
+        tmp = xp.ones(
+            [1, *[1] * len(self._contr[0].result.left)], device=device, dtype=dtype
+        )
         for i, trange in enumerate(self._to_right_tranges):
             lcontr, expr = self._to_right_exprs[(idx, trange)]
             tns = lcontr.get_data(*ops, idx_map=self._inp.idx_map)
             tmp = expr(tmp, *tns)
             idx = trange.end
-            
-            ref_idx = self._cmap[-1]+1
-            if i < len(self._to_right_tranges)-1:
-                ref_idx = self._to_right_tranges[i+1].begin
 
-            while lidx < len(shape)-1 and self._cmap[lidx] < ref_idx:
-                split = 1+len(shape.middle(lidx))
-                #left, tmp = tn_decomp.left(tmp, split)
+            ref_idx = self._cmap[-1] + 1
+            if i < len(self._to_right_tranges) - 1:
+                ref_idx = self._to_right_tranges[i + 1].begin
+
+            while lidx < len(shape) - 1 and self._cmap[lidx] < ref_idx:
+                split = 1 + len(shape.middle(lidx))
+                # left, tmp = tn_decomp.left(tmp, split)
                 res = tn_decomp.left(tmp, split)
                 left, tmp = res.left, res.right
                 data.append(left)
@@ -141,9 +147,8 @@ class DecompositionContractor:
         return TrainBase(shape, data, norm, copy_data=False)
 
     def _contract_to_left[T: ArrayLike](
-            self,
-            decomp: MatrixDecomposition,
-            *ops: TrainBase[T]) -> TrainBase[T]:
+        self, decomp: MatrixDecomposition, *ops: TrainBase[T]
+    ) -> TrainBase[T]:
         if self._inp is None:
             raise RuntimeError("Input cannot be None here.")
         xp, device, dtype = self._inp.infos(*ops)
@@ -155,23 +160,24 @@ class DecompositionContractor:
             raise ValueError("Result shape cannot be none here.")
         tn_decomp = TensorDecomposition(decomp)
 
-        lidx = len(shape)-1
+        lidx = len(shape) - 1
         idx = len(self._contr)
-        tmp = xp.ones([*[1]*len(self._contr[-1].result.right), 1],
-                      device=device, dtype=dtype)
+        tmp = xp.ones(
+            [*[1] * len(self._contr[-1].result.right), 1], device=device, dtype=dtype
+        )
         for i, trange in enumerate(self._to_left_tranges):
             lcontr, expr = self._to_left_exprs[(trange, idx)]
             tns = lcontr.get_data(*ops, idx_map=self._inp.idx_map)
             tmp = expr(*tns, tmp)
             idx = trange.begin
-            
-            ref_idx = self._cmap[0]-1
-            if i < len(self._to_left_tranges)-1:
-                ref_idx = self._to_left_tranges[i+1].end-1
+
+            ref_idx = self._cmap[0] - 1
+            if i < len(self._to_left_tranges) - 1:
+                ref_idx = self._to_left_tranges[i + 1].end - 1
 
             while lidx > 0 and self._cmap[lidx] > ref_idx:
-                split = len(tmp.shape)-len(shape.middle(lidx))-1
-                #tmp, right = tn_decomp.right(tmp, split)
+                split = len(tmp.shape) - len(shape.middle(lidx)) - 1
+                # tmp, right = tn_decomp.right(tmp, split)
                 res = tn_decomp.right(tmp, split)
                 tmp, right = res.left, res.right
                 data.append(right)
@@ -187,18 +193,20 @@ class DecompositionContractor:
     # ------------------------------------------------------------------------
     # Expression builders
 
-    def _to_right_expressions(self,
-                              tranges: Sequence[LocalRange],
-                              guess: TrainShape,
-                              *ops: TrainShape | TrainBase) -> TrainShape:
+    def _to_right_expressions(
+        self,
+        tranges: Sequence[LocalRange],
+        guess: TrainShape,
+        *ops: TrainShape | TrainBase,
+    ) -> TrainShape:
         self._to_right_exprs.clear()
         self._to_right_tranges.clear()
 
         self._to_right_expression(0, tranges[0], 1, *ops)
         self._to_right_tranges.append(tranges[0])
         for i in range(1, len(tranges)):
-            end_idx = tranges[i-1].end
-            left_size = guess.right_rank(end_idx-1)
+            end_idx = tranges[i - 1].end
+            left_size = guess.right_rank(end_idx - 1)
             if (end_idx, tranges[i]) in self._to_right_exprs:
                 continue
             elif end_idx >= tranges[i].end:
@@ -208,10 +216,11 @@ class DecompositionContractor:
         return guess
 
     def _to_right_guess(
-            self,
-            decomp: MatrixDecomposition,
-            tranges: Sequence[LocalRange],
-            *ops: TrainShape | TrainBase) -> TrainShape:
+        self,
+        decomp: MatrixDecomposition,
+        tranges: Sequence[LocalRange],
+        *ops: TrainShape | TrainBase,
+    ) -> TrainShape:
         res_shape = self._contr.result_shape
         if res_shape is None:
             raise ValueError("Result shape cannot be none here.")
@@ -220,47 +229,58 @@ class DecompositionContractor:
 
         idx = 0
         for i, trange in enumerate(tranges):
-            lcontr = fuse_local_contractions(self._contr[trange.begin:trange.end])
+            lcontr = fuse_local_contractions(self._contr[trange.begin : trange.end])
             smap = shape_map(ops, lcontr)
             smap[self._tmp_str] = ranks[-1]
             result = f"{self._tmp_str}{lcontr.result.middle}{lcontr.result.right}"
             tmp = [smap[char] for char in result]
-            
-            ref_idx = self._cmap[-1]+1
-            if i < len(tranges)-1:
-                ref_idx = tranges[i+1].begin
 
-            while idx < len(res_shape)-1 and self._cmap[idx] < ref_idx:
-                split = 1+len(res_shape.middle(idx))
+            ref_idx = self._cmap[-1] + 1
+            if i < len(tranges) - 1:
+                ref_idx = tranges[i + 1].begin
+
+            while idx < len(res_shape) - 1 and self._cmap[idx] < ref_idx:
+                split = 1 + len(res_shape.middle(idx))
                 left, tmp = tn_decomp.left_shape(tuple(tmp), split)
                 ranks.append(left[-1])
                 idx += 1
         return TrainShape(res_shape.dims, res_shape.digits, ranks[1:])
 
-    def _to_right_expression(self,
-                             prev_tend: int,
-                             cur_trange: LocalRange,
-                             left_size: int,
-                             *ops: TrainBase | TrainShape
-                             ) -> None:
+    def _to_right_expression(
+        self,
+        prev_tend: int,
+        cur_trange: LocalRange,
+        left_size: int,
+        *ops: TrainBase | TrainShape,
+    ) -> None:
         if prev_tend < cur_trange.begin:
-            raise ValueError("End of previous range must be at least the begin of the current range.")
+            raise ValueError(
+                "End of previous range must be at least the begin of the current range."
+            )
         elif prev_tend >= cur_trange.end:
-            raise ValueError("End of previous range must be less than the end of the current range.")
+            raise ValueError(
+                "End of previous range must be less than the end of the current range."
+            )
 
-        res_contr = fuse_local_contractions(self._contr[cur_trange.begin:cur_trange.end])
+        res_contr = fuse_local_contractions(
+            self._contr[cur_trange.begin : cur_trange.end]
+        )
         res_str = f"{self._tmp_str}{res_contr.result.middle}{res_contr.result.right}"
 
         if prev_tend == cur_trange.begin:
             tmp_str = f"{self._tmp_str}{res_contr.result.left}"
             contr = res_contr
         else:
-            tmp_contr = fuse_local_contractions(self._contr[cur_trange.begin:prev_tend])
-            tmp_str = f"{self._tmp_str}{tmp_contr.result.middle}{tmp_contr.result.right}"
-            contr = fuse_local_contractions(self._contr[prev_tend:cur_trange.end])
+            tmp_contr = fuse_local_contractions(
+                self._contr[cur_trange.begin : prev_tend]
+            )
+            tmp_str = (
+                f"{self._tmp_str}{tmp_contr.result.middle}{tmp_contr.result.right}"
+            )
+            contr = fuse_local_contractions(self._contr[prev_tend : cur_trange.end])
         eq = f"{tmp_str}," + ",".join(str(op) for op in contr.operands) + f"->{res_str}"
 
-        smap = shape_map(ops, *self._contr[cur_trange.begin:cur_trange.end])
+        smap = shape_map(ops, *self._contr[cur_trange.begin : cur_trange.end])
         smap[self._tmp_str] = left_size
         tmp_shape = [smap[char] for char in tmp_str]
 
@@ -268,17 +288,21 @@ class DecompositionContractor:
         expr = ArrayContractor(eq, tmp_shape, *tns, optimizer=self.optimizer)
         self._to_right_exprs[(prev_tend, cur_trange)] = contr, expr
 
-    def _to_left_expressions(self,
-                             tranges: Sequence[LocalRange],
-                             guess: TrainShape,
-                             *ops: TrainShape | TrainBase) -> None:
+    def _to_left_expressions(
+        self,
+        tranges: Sequence[LocalRange],
+        guess: TrainShape,
+        *ops: TrainShape | TrainBase,
+    ) -> None:
         self._to_left_exprs.clear()
         self._to_left_tranges.clear()
 
-        self._to_left_expression(tranges[-1], tranges[-1].end, guess.left_rank(-1), *ops)
+        self._to_left_expression(
+            tranges[-1], tranges[-1].end, guess.left_rank(-1), *ops
+        )
         self._to_left_tranges.append(tranges[-1])
-        for i in range(len(tranges)-2, -1, -1):
-            begin_idx = tranges[i+1].begin
+        for i in range(len(tranges) - 2, -1, -1):
+            begin_idx = tranges[i + 1].begin
             left_size = guess.left_rank(begin_idx)
             if (tranges[i], begin_idx) in self._to_left_exprs:
                 continue
@@ -288,60 +312,70 @@ class DecompositionContractor:
             self._to_left_tranges.append(tranges[i])
 
     def _to_left_guess(
-            self,
-            decomp: MatrixDecomposition,
-            tranges: Sequence[LocalRange],
-            *ops: TrainShape | TrainBase) -> TrainShape:
+        self,
+        decomp: MatrixDecomposition,
+        tranges: Sequence[LocalRange],
+        *ops: TrainShape | TrainBase,
+    ) -> TrainShape:
         res_shape = self._contr.result_shape
         if res_shape is None:
             raise ValueError("Result shape cannot be none here.")
         tn_decomp = TensorDecomposition(decomp)
         ranks = [1]
 
-        idx = len(res_shape)-1
+        idx = len(res_shape) - 1
         for i, trange in enumerate(reversed(tranges)):
-            lcontr = fuse_local_contractions(self._contr[trange.begin:trange.end])
+            lcontr = fuse_local_contractions(self._contr[trange.begin : trange.end])
             smap = shape_map(ops, lcontr)
             smap[self._tmp_str] = ranks[-1]
             result = f"{lcontr.result.left}{lcontr.result.middle}{self._tmp_str}"
             tmp = [smap[char] for char in result]
-            
-            ref_idx = self._cmap[0]-1
-            if i < len(tranges)-1:
-                ref_idx = tranges[-i-2].end-1
+
+            ref_idx = self._cmap[0] - 1
+            if i < len(tranges) - 1:
+                ref_idx = tranges[-i - 2].end - 1
 
             while idx > 0 and self._cmap[idx] > ref_idx:
-                split = len(tmp)-len(res_shape.middle(idx))-1
+                split = len(tmp) - len(res_shape.middle(idx)) - 1
                 tmp, right = tn_decomp.right_shape(tuple(tmp), split)
                 ranks.append(right[0])
                 idx -= 1
         ranks.reverse()
         return TrainShape(res_shape.dims, res_shape.digits, ranks[1:])
 
-    def _to_left_expression(self,
-                            cur_trange: LocalRange,
-                            prev_tbegin: int,
-                            left_size: int,
-                            *ops: TrainBase | TrainShape
-                            ) -> None:
+    def _to_left_expression(
+        self,
+        cur_trange: LocalRange,
+        prev_tbegin: int,
+        left_size: int,
+        *ops: TrainBase | TrainShape,
+    ) -> None:
         if prev_tbegin > cur_trange.end:
-            raise ValueError("Begin of the previous range must be at least the end of the current range.")
+            raise ValueError(
+                "Begin of the previous range must be at least the end of the current range."
+            )
         elif prev_tbegin <= cur_trange.begin:
-            raise ValueError("Begin of the previous range must be greater than the begin of the current range.")
+            raise ValueError(
+                "Begin of the previous range must be greater than the begin of the current range."
+            )
 
-        res_contr = fuse_local_contractions(self._contr[cur_trange.begin:cur_trange.end])
+        res_contr = fuse_local_contractions(
+            self._contr[cur_trange.begin : cur_trange.end]
+        )
         res_str = f"{res_contr.result.left}{res_contr.result.middle}{self._tmp_str}"
 
         if prev_tbegin == cur_trange.end:
             tmp_str = f"{res_contr.result.right}{self._tmp_str}"
             contr = res_contr
         else:
-            tmp_contr = fuse_local_contractions(self._contr[prev_tbegin:cur_trange.end])
+            tmp_contr = fuse_local_contractions(
+                self._contr[prev_tbegin : cur_trange.end]
+            )
             tmp_str = f"{tmp_contr.result.left}{tmp_contr.result.middle}{self._tmp_str}"
-            contr = fuse_local_contractions(self._contr[cur_trange.begin:prev_tbegin])
+            contr = fuse_local_contractions(self._contr[cur_trange.begin : prev_tbegin])
         eq = ",".join(str(op) for op in contr.operands) + f",{tmp_str}" + f"->{res_str}"
 
-        smap = shape_map(ops, *self._contr[cur_trange.begin:cur_trange.end])
+        smap = shape_map(ops, *self._contr[cur_trange.begin : cur_trange.end])
         smap[self._tmp_str] = left_size
         tmp_shape = [smap[char] for char in tmp_str]
 
@@ -349,11 +383,10 @@ class DecompositionContractor:
         expr = ArrayContractor(eq, *tns, tmp_shape, optimizer=self.optimizer)
         self._to_left_exprs[(cur_trange, prev_tbegin)] = contr, expr
 
-
     def _transform_range(self, lrange: LocalRange) -> LocalRange:
         begin = self._cmap[lrange.begin]
-        end = self._cmap[lrange.end-1]
-        return LocalRange(begin=begin, end=end+1)
+        end = self._cmap[lrange.end - 1]
+        return LocalRange(begin=begin, end=end + 1)
 
     def _get_ranges(self, direction: Direction) -> Sequence[LocalRange]:
         if self._contr.result_shape is None:
@@ -366,5 +399,7 @@ class DecompositionContractor:
         tranges = sorted(tranges)
         tranges = list(dict.fromkeys(tranges))
         if tranges[0].begin != 0 or tranges[-1].end != len(self._contr):
-            raise RuntimeError("Provided local ranges do not cover the full contraction.")
+            raise RuntimeError(
+                "Provided local ranges do not cover the full contraction."
+            )
         return tranges

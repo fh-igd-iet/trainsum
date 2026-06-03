@@ -5,8 +5,8 @@ from scipy.linalg import dft
 from trainsum import TrainSum
 from utils import backends
 
-class TestQft(unittest.TestCase):
 
+class TestQft(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [120, 256, 280, 1024]
@@ -21,7 +21,7 @@ class TestQft(unittest.TestCase):
             train = ts.qft(dim, decomp)
 
             approx = train.to_tensor()
-            diff = abs(xp.sum((exact - approx)**2) / xp.sum(exact**2))
+            diff = abs(xp.sum((exact - approx) ** 2) / xp.sum(exact**2))
             self.assertLess(diff, 1e-4)
 
     def test_iqft(self):
@@ -34,8 +34,9 @@ class TestQft(unittest.TestCase):
             train = ts.iqft(dim, decomp)
 
             approx = train.to_tensor()
-            diff = abs(xp.sum((exact - approx)**2) / xp.sum(exact**2))
+            diff = abs(xp.sum((exact - approx) ** 2) / xp.sum(exact**2))
             self.assertLess(diff, 1e-4)
+
 
 if __name__ == "__main__":
     unittest.main()

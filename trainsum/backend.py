@@ -17,10 +17,12 @@ def get_namespace(obj: Any) -> ArrayNamespace:
             obj = obj.zeros(1)
         except:
             raise TypeError("Provided object is not a recognized array or namespace.")
-    return api.array_namespace(obj) # type: ignore
+    return api.array_namespace(obj)  # type: ignore
+
 
 def namespace_of_arrays[T: ArrayLike](*arrays: T) -> ArrayNamespace[T]:
-    return api.array_namespace(*arrays) # type: ignore
+    return api.array_namespace(*arrays)  # type: ignore
+
 
 def get_index_dtype(xp: ArrayNamespace) -> Any:
     info = xp.__array_namespace_info__()
@@ -30,16 +32,23 @@ def get_index_dtype(xp: ArrayNamespace) -> Any:
             return dtypes[name]
     raise ValueError("No suitable index dtype found")
 
+def default_ftype(xp: ArrayNamespace) -> Any:
+    info = xp.__array_namespace_info__()
+    dtypes = info.default_dtypes()
+    return dtypes["real floating"]
+
 def shape_size(shape: tuple[int | None, ...]) -> int:
     if any(s is None for s in shape):
         raise ValueError("Shape contains None dimension(s), cannot compute size.")
-    return prod(s for s in shape) # type: ignore
+    return prod(s for s in shape)  # type: ignore
+
 
 def size(array: ArrayLike) -> int:
     val = _size(array)
     if val is None:
         raise ValueError("Array size is unknown (None).")
     return val
+
 
 def shape(array: ArrayLike) -> tuple[int, ...]:
     shp = array.shape

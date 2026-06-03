@@ -15,16 +15,16 @@ from .contractor import ArrayContractor, OptimizeKind
 from .contractorinput import ContractorInput
 from .utils import check_operand_shapes, get_shapes
 
-class ExactContractor:
 
+class ExactContractor:
     optimizer: OptimizeKind
     _contr: EinsumContraction
     _inp: NoneType | ContractorInput = None
     _exprs: NoneType | Sequence[ArrayContractor] = None
 
-    def __init__(self,
-                 contr: EinsumContraction,
-                 optimizer: OptimizeKind = "greedy") -> None:
+    def __init__(
+        self, contr: EinsumContraction, optimizer: OptimizeKind = "greedy"
+    ) -> None:
         if contr.result_shape is None:
             raise ValueError("ExactContractor requires a result shape.")
 
@@ -32,10 +32,9 @@ class ExactContractor:
         self._contr = deepcopy(contr)
 
     def __call__[T: ArrayLike](
-            self,
-            *ops: TrainBase[T],
-            expr: bool = False) -> TrainBase[T]:
-        #get_device_dtype(ops)
+        self, *ops: TrainBase[T], expr: bool = False
+    ) -> TrainBase[T]:
+        # get_device_dtype(ops)
         shapes = get_shapes(*ops)
         if expr or self._inp is None or self._exprs is None:
             self.calc_expressions(*shapes)
@@ -81,5 +80,6 @@ class ExactContractor:
             data = xp.reshape(data, (left_shape, *middle_shape, right_shape))
             core_data.append(data)
         norm = [Normalization.NONE] * len(core_data)
-        return TrainBase(self._contr.full_result_shape, core_data,
-                         norm=norm, copy_data=False)
+        return TrainBase(
+            self._contr.full_result_shape, core_data, norm=norm, copy_data=False
+        )

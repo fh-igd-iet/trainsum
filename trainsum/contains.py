@@ -6,16 +6,15 @@ from dataclasses import dataclass
 from typing import Sequence
 from .trainshape import TrainShape
 
+
 @dataclass(kw_only=True, frozen=True)
 class ContainsResult:
     found: bool
     reverse: bool
     core_idxs: Sequence[int]
 
-def contains(
-        ref: TrainShape,
-        other: TrainShape
-        ) -> ContainsResult:
+
+def contains(ref: TrainShape, other: TrainShape) -> ContainsResult:
     found, idxs = _contains(ref, other)
     rev = False
     if not found:
@@ -25,10 +24,8 @@ def contains(
         return ContainsResult(found=False, reverse=False, core_idxs=[])
     return ContainsResult(found=True, reverse=rev, core_idxs=idxs)
 
-def _contains(
-        ref: TrainShape,
-        other: TrainShape
-        ) -> tuple[bool, Sequence[int]]:
+
+def _contains(ref: TrainShape, other: TrainShape) -> tuple[bool, Sequence[int]]:
     idx = 0
     map_idxs = []
     for i, digits in enumerate(ref.digits):

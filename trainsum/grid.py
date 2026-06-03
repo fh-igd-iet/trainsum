@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from .backend import ArrayLike
 from .dimension import Dimension
 
+
 @dataclass(frozen=True, init=False)
 class Grid:
-
     ndims: int
     dims: Sequence[Dimension]
 

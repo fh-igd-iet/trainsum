@@ -21,23 +21,29 @@ from .utils import shape_map
 from .generatorcallabletype import GeneratorCallableType
 from .contains import contains
 
-class InnerGenerator:
 
+class InnerGenerator:
     optimizer: OptimizeKind
     _contr: EinsumContraction
     _env: Environment
     _inp: NoneType | ContractorInput
     _target: int
     _cmap: Sequence[int]
-    _exprs: dict[tuple[LocalRange, GeneratorCallableType], tuple[LocalContraction, ArrayContractor]]
+    _exprs: dict[
+        tuple[LocalRange, GeneratorCallableType],
+        tuple[LocalContraction, ArrayContractor],
+    ]
 
-    def __init__(self,
-                 contr: EinsumContraction,
-                 target: int,
-                 optimizer: OptimizeKind = DEFAULT_OPTIMIZER) -> None:
-
+    def __init__(
+        self,
+        contr: EinsumContraction,
+        target: int,
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+    ) -> None:
         if contr.result_shape is not None or contr.full_result_shape is not None:
-            raise ValueError("InnerGenerator requires an EinsumContraction without result.")
+            raise ValueError(
+                "InnerGenerator requires an EinsumContraction without result."
+            )
         elif target < 0 or target >= len(contr.operand_shapes):
             raise ValueError("Target index is out of bounds.")
 
@@ -53,16 +59,15 @@ class InnerGenerator:
         self._inp = None
 
     def __call__[T: ArrayLike](
-            self,
-            *operands: TrainBase[T],
-            expr: bool = False) -> Generator[T, tuple[LocalRange, GeneratorCallableType]]:
+        self, *operands: TrainBase[T], expr: bool = False
+    ) -> Generator[T, tuple[LocalRange, GeneratorCallableType]]:
         gen = self._gen(*operands, calc_expr=expr)
-        next(gen) # warm up
+        next(gen)  # warm up
         return gen
 
-    def calc_expressions(self,
-                         strategy: SweepingStrategy,
-                         *ops: TrainShape | TrainBase) -> None:
+    def calc_expressions(
+        self, strategy: SweepingStrategy, *ops: TrainShape | TrainBase
+    ) -> None:
         self._inp = ContractorInput(*ops)
         ref = ops[self._target]
         ref = ref if isinstance(ref, TrainShape) else ref.shape
@@ -80,9 +85,8 @@ class InnerGenerator:
     # Contraction generators
 
     def _gen[T: ArrayLike](
-            self,
-            *ops: TrainBase[T],
-            calc_expr: bool = False) -> Generator[T, tuple[LocalRange, GeneratorCallableType]]:
+        self, *ops: TrainBase[T], calc_expr: bool = False
+    ) -> Generator[T, tuple[LocalRange, GeneratorCallableType]]:
         shapes = [op.shape for op in ops]
         if self._inp is None:
             self._inp = ContractorInput(*shapes)
@@ -93,7 +97,7 @@ class InnerGenerator:
         data = None
         try:
             while True:
-                lrange, gtype = yield data # type: ignore
+                lrange, gtype = yield data  # type: ignore
                 trange = self._transform_range(lrange)
                 env_data = env_gen.send(trange)
                 if calc_expr:
@@ -120,21 +124,21 @@ class InnerGenerator:
     # Expression builders
 
     def _expression(
-            self,
-            lrange: LocalRange,
-            gtype: GeneratorCallableType,
-            *ops: TrainShape | TrainBase
-            ) -> None:
+        self,
+        lrange: LocalRange,
+        gtype: GeneratorCallableType,
+        *ops: TrainShape | TrainBase,
+    ) -> None:
         trange = self._transform_range(lrange)
 
         left = self._contr[trange.begin].result.left
-        right = self._contr[trange.end-1].result.right
+        right = self._contr[trange.end - 1].result.right
 
         res_str = OperandString()
         lefts, rights, idxs = [], [], []
 
         tcontr = LocalContraction()
-        for lcontr in self._contr[trange.begin:trange.end]:
+        for lcontr in self._contr[trange.begin : trange.end]:
             zipped = zip(lcontr.train_idxs, lcontr.core_idxs, lcontr.operands)
             for train_idx, core_idx, op_str in zipped:
                 flag = lrange.begin <= core_idx < lrange.end
@@ -151,23 +155,31 @@ class InnerGenerator:
         res_str.left = lefts[0]
         res_str.right = rights[-1]
 
-        smap = shape_map(ops, *self._contr[trange.begin:trange.end])
+        smap = shape_map(ops, *self._contr[trange.begin : trange.end])
         left_shape = [smap[char] for char in left]
         right_shape = [smap[char] for char in right]
         _, tns = tcontr.get_constants(*ops)
 
         if gtype == GeneratorCallableType.FULL:
-            res_str.left  = lefts[0]
+            res_str.left = lefts[0]
             res_str.right = rights[-1]
-            eq = f"{left}," + ",".join(str(op) for op in tcontr.operands) + f",{right}->{res_str}"
+            eq = (
+                f"{left},"
+                + ",".join(str(op) for op in tcontr.operands)
+                + f",{right}->{res_str}"
+            )
             tns = [left_shape, *tns, right_shape]
         elif gtype == GeneratorCallableType.LEFT:
-            res_str.left  = lefts[0]
+            res_str.left = lefts[0]
             res_str.right = right[1:]
-            eq = f"{left}," + ",".join(str(op) for op in tcontr.operands) + f"->{res_str}"
+            eq = (
+                f"{left},"
+                + ",".join(str(op) for op in tcontr.operands)
+                + f"->{res_str}"
+            )
             tns = [left_shape, *tns]
         else:  # gtype == GeneratorCallableType.RIGHT
-            res_str.left  = left[1:]
+            res_str.left = left[1:]
             res_str.right = rights[-1]
             eq = ",".join(str(op) for op in tcontr.operands) + f",{right}->{res_str}"
             tns = [*tns, right_shape]
@@ -177,5 +189,5 @@ class InnerGenerator:
         self._exprs[lrange, gtype] = tcontr, contr
 
     def _transform_range(self, lrange: LocalRange) -> LocalRange:
-        begin, end = self._cmap[lrange.begin], self._cmap[lrange.end-1]+1
+        begin, end = self._cmap[lrange.begin], self._cmap[lrange.end - 1] + 1
         return LocalRange(begin=begin, end=end)

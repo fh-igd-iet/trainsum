@@ -9,7 +9,7 @@ from collections.abc import Buffer
 ArrayLike = Any
 DType = Any
 Device = Any
-#ArrayNamespace = Any
+# ArrayNamespace = Any
 
 NestedSequence = Sequence[Any]
 
@@ -90,6 +90,7 @@ class ArrayLike(Protocol):
     def __rxor__(self, other: int | bool | Self) -> Self: ...
 """
 
+
 class Finfo(Protocol):
     @property
     def bits(self) -> int: ...
@@ -104,6 +105,7 @@ class Finfo(Protocol):
     @property
     def dtype(self) -> DType: ...
 
+
 class Iinfo(Protocol):
     @property
     def bits(self) -> int: ...
@@ -114,12 +116,14 @@ class Iinfo(Protocol):
     @property
     def dtype(self) -> DType: ...
 
+
 class ArrayNamespaceInfo(Protocol):
     def capabilities(self) -> dict[str, Any]: ...
     def default_device(self) -> Device: ...
-    def default_dtype(self, *args, **kwargs) -> DType: ...
+    def default_dtypes(self, *args, **kwargs) -> DType: ...
     def devices(self) -> list[Device]: ...
     def dtypes(self, *args, **kwargs) -> dict[str, DType]: ...
+
 
 class LinearAlgebraExtensions[T: ArrayLike](Protocol):
     def cholesky(self, *args, **kwargs) -> T: ...
@@ -148,7 +152,6 @@ class LinearAlgebraExtensions[T: ArrayLike](Protocol):
 
 
 class ArrayNamespace[T: ArrayLike](Protocol):
-
     # Constants
     @property
     def e(self) -> float: ...
@@ -169,32 +172,34 @@ class ArrayNamespace[T: ArrayLike](Protocol):
 
     # Creation functions
     def arange(
-            self,
-            start: int | float, /,
-            stop: int | float | None = None,
-            step: int | float = 1, *,
-            dtype: DType | None = None,
-            device: Device | None = None
-            ) -> T: ...
+        self,
+        start: int | float,
+        /,
+        stop: int | float | None = None,
+        step: int | float = 1,
+        *,
+        dtype: DType | None = None,
+        device: Device | None = None,
+    ) -> T: ...
     def asarray(
-            self,
-            obj: T | bool | int | float | complex | NestedSequence | Buffer, /, *,
-            dtype: DType | None = None,
-            device: Device | None = None,
-            copy: bool | None = None
-            ) -> T: ...
+        self,
+        obj: T | bool | int | float | complex | NestedSequence | Buffer,
+        /,
+        *,
+        dtype: DType | None = None,
+        device: Device | None = None,
+        copy: bool | None = None,
+    ) -> T: ...
     def empty(
-            self,
-            shape: int | tuple[int, ...], *,
-            dtype: DType | None = None,
-            device: Device | None = None
-            ) -> T: ...
+        self,
+        shape: int | tuple[int, ...],
+        *,
+        dtype: DType | None = None,
+        device: Device | None = None,
+    ) -> T: ...
     def empty_like(
-            self,
-            x: T, /, *,
-            dtype: DType | None = None,
-            device: Device | None = None
-            ) -> T: ...
+        self, x: T, /, *, dtype: DType | None = None, device: Device | None = None
+    ) -> T: ...
     def eye(self, *args, **kwargs) -> T: ...
     def from_dlpack(self, *args, **kwargs) -> T: ...
     def full(self, *args, **kwargs) -> T: ...

@@ -17,6 +17,7 @@ from .operandstring import OperandString
 from .localcontraction import LocalContraction
 from .contains import contains
 
+
 @dataclass(frozen=True)
 class EinsumContraction(SequenceOf[LocalContraction]):
     equation: EinsumEquation
@@ -25,14 +26,18 @@ class EinsumContraction(SequenceOf[LocalContraction]):
     full_result_shape: NoneType | TrainShape
     result_shape: NoneType | TrainShape
 
-    def __init__(self,
-                 eq: EinsumEquation,
-                 op_shape: Optional[TrainShape] = None,
-                 result: Optional[TrainShape] = None) -> None:
+    def __init__(
+        self,
+        eq: EinsumEquation,
+        op_shape: Optional[TrainShape] = None,
+        result: Optional[TrainShape] = None,
+    ) -> None:
         if op_shape is None:
             op_shape = einsum_operation_shape(eq)
         full_res_shape = einsum_result_shape(eq, op_shape)
-        op_shape, full_res_shape, res_shape = _get_result(op_shape, full_res_shape, result)
+        op_shape, full_res_shape, res_shape = _get_result(
+            op_shape, full_res_shape, result
+        )
 
         trains = []
         core_maps = []
@@ -61,31 +66,35 @@ class EinsumContraction(SequenceOf[LocalContraction]):
             for train_idx, (cmap, train, syms, rev) in enumerate(zipped):
                 idxs = [j for j, idx in enumerate(cmap) if i == idx]
                 for j, idx in enumerate(idxs):
-
                     sym = syms[idx]
                     if i == 0 and idx == 0:
                         sym.left = first_left
-                    if i == len(op_shape)-1 and idx == len(train)-1:
+                    if i == len(op_shape) - 1 and idx == len(train) - 1:
                         sym.right = last_right
 
-                    lcontr.add_operand(train_idx,
-                                       idx if not rev else len(train)-1-idx,
-                                       sym.reverse() if rev else sym)
-                    
+                    lcontr.add_operand(
+                        train_idx,
+                        idx if not rev else len(train) - 1 - idx,
+                        sym.reverse() if rev else sym,
+                    )
+
                     if not is_none:
                         for digit in train.digits[idx]:
-                            if digit in full_res_shape.digits[i] and digit_sym_map[digit] not in res_str.middle:
+                            if (
+                                digit in full_res_shape.digits[i]
+                                and digit_sym_map[digit] not in res_str.middle
+                            ):
                                 res_str.middle += digit_sym_map[digit]
                                 perm.append(_digit_index(res_shape, digit))
 
                     if j == 0 and idx != 0:
                         res_str.left += sym.left
-                    if j == len(idxs)-1 and idx != len(train)-1:
+                    if j == len(idxs) - 1 and idx != len(train) - 1:
                         res_str.right += sym.right
 
             if i == 0:
                 res_str.left = first_left
-            if i == len(op_shape)-1:
+            if i == len(op_shape) - 1:
                 res_str.right = last_right
 
             if not is_none and not full_res_shape.digits[i] is None:
@@ -93,15 +102,17 @@ class EinsumContraction(SequenceOf[LocalContraction]):
                 tmp.sort()
                 perm = [tmp.index(p) for p in perm]
                 tmp = {idx: i for i, idx in enumerate(perm)}
-                res_str.middle = "".join([res_str.middle[tmp[j]] for j in range(len(perm))])
+                res_str.middle = "".join(
+                    [res_str.middle[tmp[j]] for j in range(len(perm))]
+                )
 
             lcontr.set_result(res_str)
             locs.append(lcontr)
-            #print(",".join(str(op) for op in lcontr.operands) + "->" + str(lcontr.result))
-            #print("operand idxs:", [val for val in lcontr.train_idxs])
-            #print("core idx    :", [val for val in lcontr.core_idxs])
-            #print("result digits:", [str(d) for d in lcontr.core])
-            #print("-----------------")
+            # print(",".join(str(op) for op in lcontr.operands) + "->" + str(lcontr.result))
+            # print("operand idxs:", [val for val in lcontr.train_idxs])
+            # print("core idx    :", [val for val in lcontr.core_idxs])
+            # print("result digits:", [str(d) for d in lcontr.core])
+            # print("-----------------")
 
         object.__setattr__(self, "equation", eq)
         object.__setattr__(self, "operation_shape", op_shape)
@@ -109,6 +120,7 @@ class EinsumContraction(SequenceOf[LocalContraction]):
         object.__setattr__(self, "result_shape", res_shape)
         object.__setattr__(self, "full_result_shape", full_res_shape)
         super().__init__(locs)
+
 
 def get_symbol_generator(einsum_contr: Sequence[LocalContraction]) -> Generator[str]:
     """Get a symbol generator that avoids conflicts with existing symbols in the contraction."""
@@ -124,9 +136,10 @@ def get_symbol_generator(einsum_contr: Sequence[LocalContraction]) -> Generator[
             continue
         yield char
 
-def _train_symbols(cores: TrainShape,
-                  digit_sym_map: dict[Digit, str],
-                  sym_gen: Generator[str]) -> list[OperandString]:
+
+def _train_symbols(
+    cores: TrainShape, digit_sym_map: dict[Digit, str], sym_gen: Generator[str]
+) -> list[OperandString]:
     """Get the symbol representation of a trainshape based on its digits"""
     res = []
     left = next(sym_gen)
@@ -138,7 +151,10 @@ def _train_symbols(cores: TrainShape,
         res.append(op_str)
     return res
 
-def _digit_symbol_map(op_strs: Sequence[str], ops: Sequence[TrainShape], symbol_gen: Generator[str]) -> dict[Digit, str]:
+
+def _digit_symbol_map(
+    op_strs: Sequence[str], ops: Sequence[TrainShape], symbol_gen: Generator[str]
+) -> dict[Digit, str]:
     """Create a mapping of digits to unique symbols"""
     digit_map = dict[Digit, str]()
     tmp_map = {}
@@ -151,11 +167,12 @@ def _digit_symbol_map(op_strs: Sequence[str], ops: Sequence[TrainShape], symbol_
                 digit_map[digit] = dim_syms[digit.idx]
     return digit_map
 
+
 def _get_result(
-        op_shape: TrainShape,
-        result: NoneType | TrainShape,
-        guess_result: NoneType | TrainShape
-        ) -> tuple[TrainShape, NoneType | TrainShape, NoneType | TrainShape]:
+    op_shape: TrainShape,
+    result: NoneType | TrainShape,
+    guess_result: NoneType | TrainShape,
+) -> tuple[TrainShape, NoneType | TrainShape, NoneType | TrainShape]:
     """Validate and return the contraction result shape."""
     if result is None and guess_result is None:
         return op_shape, None, None
@@ -174,6 +191,7 @@ def _get_result(
             op_shape = op_shape.reverse()
         return op_shape, result, deepcopy(guess_result)
     raise RuntimeError("Unreachable code in get_result.")
+
 
 def _digit_index(shape: TrainShape, digit: Digit) -> int:
     """Get the index of a digit in a TrainShape."""

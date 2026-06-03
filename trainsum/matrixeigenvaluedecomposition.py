@@ -5,12 +5,12 @@
 from typing import Protocol
 from .backend import ArrayLike
 
+
 class MatrixEigenvalueDecomposition(Protocol):
     """Protocol for a matrix eigenvalue decomposition."""
-    
+
     def __call__(self, mat: ArrayLike, /) -> tuple[ArrayLike, ArrayLike]:
         """
         Decompose a matrix into its eigenvalues and eigenvectors.
         """
         ...
-

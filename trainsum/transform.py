@@ -15,7 +15,10 @@ from .min_max import min_max
 from .einsumcontraction import EinsumContraction
 from .einsumequation import EinsumEquation
 
-def transform[T: ArrayLike](train: TrainBase[T], func: Callable[[T], T]) -> TrainBase[T]:
+
+def transform[T: ArrayLike](
+    train: TrainBase[T], func: Callable[[T], T]
+) -> TrainBase[T]:
     xp = namespace_of_trains(train)
     opts = get_options(xp, OptionType.CROSS)
 

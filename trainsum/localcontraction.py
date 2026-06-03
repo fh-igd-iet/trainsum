@@ -14,7 +14,6 @@ from .trainbase import TrainBase
 
 @dataclass(frozen=True)
 class LocalContraction:
-
     operands: Sequence[OperandString] = field(default_factory=list)
     result: OperandString = field(default_factory=OperandString)
 
@@ -29,9 +28,9 @@ class LocalContraction:
     def set_result(self, res_str: OperandString) -> None:
         object.__setattr__(self, "result", res_str)
 
-    def get_data[T: ArrayLike](self,
-                 *trains: TrainBase[T],
-                 idx_map: dict[int, int] = {}) -> Sequence[T]:
+    def get_data[T: ArrayLike](
+        self, *trains: TrainBase[T], idx_map: dict[int, int] = {}
+    ) -> Sequence[T]:
         """Get the data arrays for the operands involved in this contraction."""
         out = []
         for op_idx, core_idx in zip(self.train_idxs, self.core_idxs):
@@ -48,20 +47,30 @@ class LocalContraction:
             if not isinstance(op, TrainShape):
                 out.append(op.data[core_idx].shape)
             else:
-                out.append((op.left_rank(core_idx), *op.middle(core_idx), op.right_rank(core_idx)))
+                out.append(
+                    (
+                        op.left_rank(core_idx),
+                        *op.middle(core_idx),
+                        op.right_rank(core_idx),
+                    )
+                )
         return out
 
-    def get_constants[T: ArrayLike](self,
-                      *ops: TrainShape | TrainBase[T]
-                      ) -> tuple[Sequence[int], Sequence[Sequence[int] | T]]:
+    def get_constants[T: ArrayLike](
+        self, *ops: TrainShape | TrainBase[T]
+    ) -> tuple[Sequence[int], Sequence[Sequence[int] | T]]:
         idxs = []
         out = []
         for i, (op_idx, core_idx) in enumerate(zip(self.train_idxs, self.core_idxs)):
             op = ops[op_idx]
             if isinstance(op, TrainShape):
-                out.append([op.left_rank(core_idx),
-                            *op.middle(core_idx),
-                            op.right_rank(core_idx)])
+                out.append(
+                    [
+                        op.left_rank(core_idx),
+                        *op.middle(core_idx),
+                        op.right_rank(core_idx),
+                    ]
+                )
             else:
                 out.append(op.data[core_idx])
                 idxs.append(i)
@@ -72,6 +81,7 @@ class LocalContraction:
         res_str = str(self.result)
         return f"{ops_str} -> {res_str}"
 
+
 def fuse_local_contractions(ops: Sequence[LocalContraction]) -> LocalContraction:
     if len(ops) == 0:
         raise ValueError("Cannot fuse zero LocalContractions.")
@@ -80,14 +90,18 @@ def fuse_local_contractions(ops: Sequence[LocalContraction]) -> LocalContraction
     contr = deepcopy(ops[0])
     res = ops[0].result
     for i in range(1, len(ops)):
-        prev_right = ops[i-1].result.right
+        prev_right = ops[i - 1].result.right
         cur_left = ops[i].result.left
         if set(prev_right) != set(cur_left):
             raise ValueError("LocalContractions have incompatible contraction indices.")
-        res = OperandString(left=res.left,
-                            middle=res.middle+ops[i].result.middle,
-                            right=ops[i].result.right)
-        for op_str, train_idx, core_idx in zip(ops[i].operands, ops[i].train_idxs, ops[i].core_idxs):
+        res = OperandString(
+            left=res.left,
+            middle=res.middle + ops[i].result.middle,
+            right=ops[i].result.right,
+        )
+        for op_str, train_idx, core_idx in zip(
+            ops[i].operands, ops[i].train_idxs, ops[i].core_idxs
+        ):
             contr.add_operand(train_idx, core_idx, op_str)
     contr.set_result(res)
     return contr

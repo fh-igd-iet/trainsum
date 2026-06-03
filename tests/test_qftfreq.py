@@ -4,8 +4,8 @@ from itertools import product
 from trainsum import TrainSum
 from utils import backends
 
-class TestQftShift(unittest.TestCase):
 
+class TestQftShift(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [120, 256, 280, 1024]
@@ -16,12 +16,13 @@ class TestQftShift(unittest.TestCase):
             xp = ts.namespace
             dim = ts.dimension(size)
 
-            exact = xp.fft.fftfreq(size, d=val) # type: ignore
+            exact = xp.fft.fftfreq(size, d=val)  # type: ignore
             train = ts.qftfreq(dim, val)
 
             approx = train.to_tensor()
-            diff = abs(xp.sum((exact - approx)**2) / xp.sum(exact**2))
+            diff = abs(xp.sum((exact - approx) ** 2) / xp.sum(exact**2))
             self.assertLess(diff, 1e-7)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,6 +21,26 @@ from .matrixeigenvaluedecomposition import MatrixEigenvalueDecomposition
 from .locallinsolver import LocalLinSolver, LocalLinSolverResult
 from .localeigsolver import LocalEigSolver, LocalEigSolverResult
 
-from .options import Options, ExactOptions, EvaluationOptions, DecompositionOptions, VariationalOptions, OptionType
+from .integerequation import IntegerEquation
+from .linearintegerequation import LinearIntegerEquation
+from .moduleintegerequation import ModuloIntegerEquation
+from .rangeintegerequation import RangeIntegerEquation
 
-from .trainsum import TrainSum, EigSolver, LinSolver, LinearMap, EinsumExpression, EvaluateExpression
+from .options import (
+    Options,
+    ExactOptions,
+    EvaluationOptions,
+    DecompositionOptions,
+    VariationalOptions,
+    OptionType,
+    NormationOptions,
+)
+
+from .trainsum import (
+    TrainSum,
+    EigSolver,
+    LinSolver,
+    LinearMap,
+    EinsumExpression,
+    EvaluateExpression,
+)

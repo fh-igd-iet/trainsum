@@ -8,6 +8,7 @@ from .backend import ArrayLike, namespace_of_arrays
 from .matrixdecomposition import MatrixDecompositionResult
 from .utils import check_non_neg, check_pos
 
+
 @dataclass(kw_only=True)
 class SVDecompositionResult[T: ArrayLike](MatrixDecompositionResult[T]):
     #: Left matrix of the decomposition.
@@ -16,6 +17,7 @@ class SVDecompositionResult[T: ArrayLike](MatrixDecompositionResult[T]):
     right: T
     #: Singular values.
     singular_values: T
+
 
 @dataclass(kw_only=True)
 class SVDecomposition[T: ArrayLike]:
@@ -38,31 +40,37 @@ class SVDecomposition[T: ArrayLike]:
         """Calculate :math:`U \\Sigma V^H` and return :math:`U \\Sigma` and :math:`V^H`."""
         xp = namespace_of_arrays(mat)
         u, s, vh = self._svd(mat)
-        u = u * s[xp.newaxis,:]
+        u = u * s[...,xp.newaxis,:]
         return SVDecompositionResult(left=u, right=vh, singular_values=s)
 
     def left(self, mat: T) -> SVDecompositionResult[T]:
         """Calculate :math:`U \\Sigma V^H` and return :math:`U` and :math:`\\Sigma V^H`."""
         xp = namespace_of_arrays(mat)
         u, s, vh = self._svd(mat)
-        vh = s[:,xp.newaxis] * vh
+        vh = s[...,:,xp.newaxis] * vh
         return SVDecompositionResult(left=u, right=vh, singular_values=s)
 
     def _svd(self, mat: T) -> tuple[T, T, T]:
         xp = namespace_of_arrays(mat)
         if not hasattr(xp, "linalg"):
-            raise NotImplementedError("Linalg extension missing on this backend, implement your own SVDecomposition!.")
+            raise NotImplementedError(
+                "Linalg extension missing on this backend, implement your own SVDecomposition!."
+            )
         u, s, vh = xp.linalg.svd(mat, full_matrices=False)
         numel = max(1, min(int(xp.sum(s > self.cutoff)), self.max_rank))
-        return u[:,:numel], s[:numel], vh[:numel,:]
+        return u[...,:numel], s[...,:numel], vh[...,:numel,:]
 
-    def left_shape(self, shape: tuple[int, int]) -> tuple[tuple[int, int], tuple[int, int]]:
+    def left_shape(
+        self, shape: tuple[int, int]
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """Calculate the shape of the left function."""
         m, n = shape
         k = min(m, n, self.max_rank)
         return (m, k), (k, n)
 
-    def right_shape(self, shape: tuple[int, int]) -> tuple[tuple[int, int], tuple[int, int]]:
+    def right_shape(
+        self, shape: tuple[int, int]
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """Calculate the shape of the right function."""
         m, n = shape
         k = min(m, n, self.max_rank)

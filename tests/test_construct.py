@@ -6,8 +6,8 @@ from trainsum import TrainSum
 from trainsum.typing import UniformGrid, TrainShape
 from utils import backends, rand_data
 
-class TestConstruct(unittest.TestCase):
 
+class TestConstruct(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
 
@@ -18,10 +18,15 @@ class TestConstruct(unittest.TestCase):
 
     def get_idxs(self, ts, grid: UniformGrid):
         xp = ts.namespace
-        idxs = xp.zeros([len(grid.dims), *[dim.size() for dim in grid.dims]],
-                        dtype=ts.index_type)
+        idxs = xp.zeros(
+            [len(grid.dims), *[dim.size() for dim in grid.dims]], dtype=ts.index_type
+        )
         for i, dim in enumerate(grid.dims):
-            cut = (*(xp.newaxis,) * i, slice(None), *(xp.newaxis,) * (len(grid.dims) - i - 1))
+            cut = (
+                *(xp.newaxis,) * i,
+                slice(None),
+                *(xp.newaxis,) * (len(grid.dims) - i - 1),
+            )
             idxs[i] += xp.arange(dim.size(), dtype=ts.index_type)[cut]
         return idxs
 
@@ -29,10 +34,12 @@ class TestConstruct(unittest.TestCase):
         xp = ts.namespace
         train = ts.tensortrain(shape, data)
         approx = train.to_tensor()
-        diff = abs(xp.sum((data - approx)**2))
+        diff = abs(xp.sum((data - approx) ** 2))
         self.assertLess(diff, 1e-5)
 
-    def check_cross_construct(self, ts: TrainSum, shape: TrainShape, grid: UniformGrid, func: Any) -> None:
+    def check_cross_construct(
+        self, ts: TrainSum, shape: TrainShape, grid: UniformGrid, func: Any
+    ) -> None:
         xp = ts.namespace
         train = ts.tensortrain(shape, func)
 
@@ -40,7 +47,7 @@ class TestConstruct(unittest.TestCase):
         exact = func(idxs)
 
         approx = train.to_tensor()
-        diff = abs(xp.sum((exact - approx)**2))
+        diff = abs(xp.sum((exact - approx) ** 2))
         self.assertLess(diff, 1e-5)
 
     def test_data(self):
@@ -66,7 +73,9 @@ class TestConstruct(unittest.TestCase):
             xp = ts.namespace
             grid = self.get_grid(ts, sizes, -10.0, 10.0)
 
-            func = lambda idxs: xp.exp(-0.5 * xp.sqrt(xp.sum(grid.to_coords(idxs)**2, axis=0)))
+            func = lambda idxs: xp.exp(
+                -0.5 * xp.sqrt(xp.sum(grid.to_coords(idxs) ** 2, axis=0))
+            )
             shape = ts.trainshape(*grid.dims, mode="block")
             with ts.cross(max_rank=32, eps=1e-10):
                 self.check_cross_construct(ts, shape, grid, func)
@@ -86,6 +95,7 @@ class TestConstruct(unittest.TestCase):
             train = ts.tensortrain(shape, cores)
             for ref_core, core in zip(cores, train.cores):
                 self.assertTrue(xp.all(xp.equal(ref_core, core)))
+
 
 if __name__ == "__main__":
     unittest.main()

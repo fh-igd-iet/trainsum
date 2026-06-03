@@ -4,8 +4,8 @@ from itertools import product
 from trainsum import TrainSum
 from utils import backends
 
-class TestPolyval(unittest.TestCase):
 
+class TestPolyval(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [120, 256, 280, 1024]
@@ -20,12 +20,13 @@ class TestPolyval(unittest.TestCase):
             grid = ts.uniform_grid(dim, domain)
 
             x = xp.linspace(domain.lower, domain.upper, dim.size())
-            exact = xp.sin(val*(x-offset))
+            exact = xp.sin(val * (x - offset))
             train = ts.sin(grid, val, offset)
 
             approx = train.to_tensor()
-            diff = abs(xp.sum((exact - approx)**2))
+            diff = abs(xp.sum((exact - approx) ** 2))
             self.assertLess(diff, 1e-7)
+
 
 if __name__ == "__main__":
     unittest.main()

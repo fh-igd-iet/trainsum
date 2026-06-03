@@ -4,6 +4,7 @@
 
 from enum import Enum
 
+
 class GeneratorCallableType(Enum):
     LEFT = 1
     RIGHT = 2

@@ -8,16 +8,19 @@ from trainsum.digit import Digit
 from trainsum.backend import get_index_dtype
 from utils import prime_factorization, backends
 
-class TestDimension(unittest.TestCase):
 
+class TestDimension(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [120, 256]
 
     def digits(self, idf: int, size: int) -> list[Digit]:
         bases = prime_factorization(size)
-        factors = [prod(bases[i+1:]) for i in range(len(bases))]
-        return [Digit(idf, i, base, factor) for i, (base, factor) in enumerate(zip(bases, factors))]
+        factors = [prod(bases[i + 1 :]) for i in range(len(bases))]
+        return [
+            Digit(idf, i, base, factor)
+            for i, (base, factor) in enumerate(zip(bases, factors))
+        ]
 
     def digit_tensor(self, xp: Any, size: int) -> Any:
         int_type = get_index_dtype(xp)
@@ -25,7 +28,7 @@ class TestDimension(unittest.TestCase):
         idxs = xp.arange(size, dtype=int_type)
         digits = xp.zeros((len(bases), *idxs.shape), dtype=int_type)
         for i, base in enumerate(reversed(bases)):
-            digits[len(bases)-i-1,...] = idxs % base
+            digits[len(bases) - i - 1, ...] = idxs % base
             idxs //= base
         return digits
 
@@ -38,7 +41,7 @@ class TestDimension(unittest.TestCase):
             dim = ts.dimension(size)
             ref_digits = self.digits(dim.idf, size)
             self.assertEqual(len(dim), len(ref_digits))
-            self.assertTrue(all(d1==d2 for d1, d2 in zip(dim, ref_digits)))
+            self.assertTrue(all(d1 == d2 for d1, d2 in zip(dim, ref_digits)))
 
         for ts in self.trainsum:
             self.assertRaises(ValueError, ts.dimension, 0)
@@ -58,7 +61,7 @@ class TestDimension(unittest.TestCase):
             dims = [ts.dimension(size) for size in self.sizes]
             for i in range(len(dims)):
                 self.assertEqual(dims[i], dims[i])
-                for j in range(i+1, len(dims)):
+                for j in range(i + 1, len(dims)):
                     self.assertNotEqual(dims[i], dims[j])
 
     def test_to_idxs(self):
@@ -78,6 +81,7 @@ class TestDimension(unittest.TestCase):
             idxs = self.index_tensor(xp, size)
             digits = dim.to_digits(idxs)
             self.assertTrue(xp.all(digits == ref_digits))
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

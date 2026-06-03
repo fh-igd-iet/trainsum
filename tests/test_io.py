@@ -8,11 +8,12 @@ from trainsum.typing import TensorTrain, UniformGrid
 from utils import backends, rand_data
 
 path = os.path.dirname(__file__)
-class TestIO(unittest.TestCase):
 
+
+class TestIO(unittest.TestCase):
     def setUp(self) -> None:
         self.trainsum = [TrainSum(backend) for backend in backends]
-        self.sizes = [(120,), (256,18), (280,), (1024,20)]
+        self.sizes = [(120,), (256, 18), (280,), (1024, 20)]
         self.modes = ("block", "interleaved")
 
         os.mkdir(f"{path}/data")
@@ -33,7 +34,7 @@ class TestIO(unittest.TestCase):
             cores = []
             for i in range(len(shape)):
                 left = 1 if i == 0 else 10
-                right = 1 if i == len(shape)-1 else 10
+                right = 1 if i == len(shape) - 1 else 10
                 cores.append(rand_data(xp, left, *shape.middle(i), right))
             ref_train = ts.tensortrain(shape, cores)
 
@@ -63,6 +64,7 @@ class TestIO(unittest.TestCase):
                 self.assertEqual(domain, ref_domain)
 
             del self.file[name]
+
 
 if __name__ == "__main__":
     unittest.main()

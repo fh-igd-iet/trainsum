@@ -3,8 +3,8 @@ import unittest
 from trainsum import TrainSum
 from utils import backends
 
-class TestDomain(unittest.TestCase):
 
+class TestDomain(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
 
@@ -27,5 +27,6 @@ class TestDomain(unittest.TestCase):
             self.assertEqual(domain1, domain2)
             self.assertNotEqual(domain1, domain3)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

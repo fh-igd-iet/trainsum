@@ -13,22 +13,34 @@ from .utils import symbol_generator
 from .to_train import to_train
 from .einsum import einsum
 
+
 @overload
-def construct[T: ArrayLike](shape: TrainShape, func: Callable[[T], T], xp: ArrayNamespace[T], start_idxs: Optional[T] = None, /) -> TrainBase[T]: ...
+def construct[T: ArrayLike](
+    shape: TrainShape,
+    func: Callable[[T], T],
+    xp: ArrayNamespace[T],
+    start_idxs: Optional[T] = None,
+    /,
+) -> TrainBase[T]: ...
 @overload
 def construct[T: ArrayLike](shape: TrainShape, data: T, /) -> TrainBase[T]: ...
 # implementation
 def construct[T: ArrayLike](
-        shape: TrainShape,
-        data: T | Callable[[T], T],
-        xp: Optional[ArrayNamespace[T]] = None,
-        start_idxs: Optional[T] = None, /
-        ) -> TrainBase[T]:
+    shape: TrainShape,
+    data: T | Callable[[T], T],
+    xp: Optional[ArrayNamespace[T]] = None,
+    start_idxs: Optional[T] = None,
+    /,
+) -> TrainBase[T]:
     if isinstance(data, Callable):
         if xp is None:
-            raise ValueError("Array namespace must be provided when data is a function.")
+            raise ValueError(
+                "Array namespace must be provided when data is a function."
+            )
         opts = get_options(xp, OptionType.CROSS)
-        cross = CrossInterpolation(solver=opts.solver, strategy=opts.strategy, eps=opts.eps)
+        cross = CrossInterpolation(
+            solver=opts.solver, strategy=opts.strategy, eps=opts.eps
+        )
         return cross(xp, data, shape, start_idxs)
     else:
         sgen = symbol_generator()

@@ -4,6 +4,7 @@
 
 from enum import Enum
 
+
 class Normalization(Enum):
     NONE = 0
     LEFT = 1

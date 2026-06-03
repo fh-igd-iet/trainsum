@@ -5,11 +5,19 @@
 from typing import Sequence
 from math import prod
 
-from .backend import DType, Device, get_index_dtype, ArrayLike, namespace_of_arrays, device
+from .backend import (
+    DType,
+    Device,
+    get_index_dtype,
+    ArrayLike,
+    namespace_of_arrays,
+    device,
+)
 from .digit import Digit
 from .dimension import Dimension
 from .valueset import ValueSet
 from .sequenceof import SequenceOf
+
 
 class FunctionalCore[T: ArrayLike](SequenceOf[Digit]):
     _left: ValueSet
@@ -37,11 +45,12 @@ class FunctionalCore[T: ArrayLike](SequenceOf[Digit]):
         return self._middle.device
 
     def __init__(
-            self,
-            dims: Sequence[Dimension],
-            digits: Sequence[Digit],
-            left_storage: T,
-            right_storage: T) -> None:
+        self,
+        dims: Sequence[Dimension],
+        digits: Sequence[Digit],
+        left_storage: T,
+        right_storage: T,
+    ) -> None:
         if device(left_storage) != device(right_storage):
             raise ValueError("Left and right storage must be on the same device")
 
@@ -49,13 +58,17 @@ class FunctionalCore[T: ArrayLike](SequenceOf[Digit]):
         self._right = ValueSet(right_storage)
 
         xp = namespace_of_arrays(left_storage, right_storage)
-        tmp = xp.empty((len(dims), prod(digit.base for digit in digits)),
-                       dtype=get_index_dtype(xp),
-                       device=device(left_storage))
+        tmp = xp.empty(
+            (len(dims), prod(digit.base for digit in digits)),
+            dtype=get_index_dtype(xp),
+            device=device(left_storage),
+        )
         self._middle = self._get_middle(dims, digits, tmp)
         super().__init__(digits)
 
-    def _get_middle(self, dims: Sequence[Dimension], digits: Sequence[Digit], storage: T) -> ValueSet[T]:
+    def _get_middle(
+        self, dims: Sequence[Dimension], digits: Sequence[Digit], storage: T
+    ) -> ValueSet[T]:
         xp = namespace_of_arrays(storage)
         int_type = get_index_dtype(xp)
         middle = ValueSet(storage)
@@ -64,8 +77,10 @@ class FunctionalCore[T: ArrayLike](SequenceOf[Digit]):
         for i, digit in enumerate(digits):
             dim_idx = dim_map[digit.idf]
             tmp = xp.zeros((len(dims), digit.base), dtype=int_type)
-            tmp[dim_idx,:] = xp.asarray([i*digit.factor for i in range(digit.base)], dtype=int_type)
-            view = [len(dims),*[1]*i, -1,*[1]*(len(digits)-i-1)]
+            tmp[dim_idx, :] = xp.asarray(
+                [i * digit.factor for i in range(digit.base)], dtype=int_type
+            )
+            view = [len(dims), *[1] * i, -1, *[1] * (len(digits) - i - 1)]
             idxs += xp.reshape(tmp, view)
         idxs = xp.reshape(idxs, (idxs.shape[0], prod(idxs.shape[1:])))
         middle.add(idxs)

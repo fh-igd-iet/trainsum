@@ -6,14 +6,25 @@ from typing import Callable, Sequence, Literal
 from types import NoneType
 from copy import deepcopy
 import opt_einsum as oe
-#from opt_einsum.typing import OptimizeKind
+
+# from opt_einsum.typing import OptimizeKind
 from .backend import ArrayLike, shape
 
-OptimizeKind = Literal["optimal", "dp", "greedy", "random-greedy", "random-greedy-128", "branch-all", "branch-2", "auto", "auto-hq"]
+OptimizeKind = Literal[
+    "optimal",
+    "dp",
+    "greedy",
+    "random-greedy",
+    "random-greedy-128",
+    "branch-all",
+    "branch-2",
+    "auto",
+    "auto-hq",
+]
 DEFAULT_OPTIMIZER: OptimizeKind = "greedy"
 
-class ArrayContractor[T: ArrayLike]:
 
+class ArrayContractor[T: ArrayLike]:
     _ops: list[NoneType | ArrayLike]
     _shapes: Sequence[Sequence[int]]
     _opt: OptimizeKind
@@ -21,10 +32,11 @@ class ArrayContractor[T: ArrayLike]:
     _expr: Callable[..., ArrayLike]
 
     def __init__(
-            self,
-            eq: str,
-            *ops: Sequence[int] | T,
-            optimizer: OptimizeKind = DEFAULT_OPTIMIZER) -> None:
+        self,
+        eq: str,
+        *ops: Sequence[int] | T,
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+    ) -> None:
         self._shapes = []
         self._ops = []
         self._idxs = []
@@ -40,17 +52,16 @@ class ArrayContractor[T: ArrayLike]:
             res = oe.contract(eq, *self._ops, optimize=optimizer)
             self._expr = lambda: res
         else:
-            self._expr = oe.contract_expression(
-                eq,
-                *self._shapes,
-                optimize=optimizer)
-            #print(str(self._expr).split("\n")[0])
+            self._expr = oe.contract_expression(eq, *self._shapes, optimize=optimizer)
+            # print(str(self._expr).split("\n")[0])
 
     def __call__(self, *ops: T) -> T:
         if len(ops) != len(self._idxs):
-            raise ValueError("Number of provided operands does not match the number required operands.")
+            raise ValueError(
+                "Number of provided operands does not match the number required operands."
+            )
         if len(self._idxs) == 0:
-            return self._expr() # type: ignore
+            return self._expr()  # type: ignore
         for idx, op in zip(self._idxs, ops):
             self._ops[idx] = op
-        return self._expr(*self._ops) # type: ignore
+        return self._expr(*self._ops)  # type: ignore

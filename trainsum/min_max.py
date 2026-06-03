@@ -13,6 +13,7 @@ from .evaluationexpression import EvaluationExpression
 from .exactaddition import ExactAddition
 from .full import full
 
+
 @dataclass
 class MinMaxResult[T: ArrayLike]:
     """
@@ -28,6 +29,7 @@ class MinMaxResult[T: ArrayLike]:
     max_idxs: T
     #: Maximum value
     max_val: float
+
 
 def min_max[T: ArrayLike](train: TrainBase[T], num: int) -> MinMaxResult[T]:
     xp = namespace_of_trains(train)
@@ -69,16 +71,19 @@ def min_max[T: ArrayLike](train: TrainBase[T], num: int) -> MinMaxResult[T]:
         return MinMaxResult(idxs, val, mod_idxs, mod_val)
     return MinMaxResult(mod_idxs, mod_val, idxs, val)
 
+
 def right_sweep[T: ArrayLike](train: TrainBase[T], num: int) -> T:
     xp = namespace_of_trains(train)
     tshape = train.shape
     ndims = len(tshape.dims)
     max_middle = max(prod(tshape.middle(i)) for i in range(len(tshape)))
 
-    cur_idxs = xp.zeros((ndims, max_middle*num),
-                        device=train.device, dtype=get_index_dtype(xp))
-    tmp_idxs = xp.zeros((ndims, max_middle*num),
-                        device=train.device, dtype=get_index_dtype(xp))
+    cur_idxs = xp.zeros(
+        (ndims, max_middle * num), device=train.device, dtype=get_index_dtype(xp)
+    )
+    tmp_idxs = xp.zeros(
+        (ndims, max_middle * num), device=train.device, dtype=get_index_dtype(xp)
+    )
     dim_map = {dim.idf: i for i, dim in enumerate(train.shape.dims)}
 
     cur_num = 1
@@ -86,24 +91,25 @@ def right_sweep[T: ArrayLike](train: TrainBase[T], num: int) -> T:
     train.normalize(0)
     for i, tn in enumerate(train.data):
         middle = prod(tshape.middle(i))
-        mat = xp.tensordot(mat, tn, axes=([1],[0]))
+        mat = xp.tensordot(mat, tn, axes=([1], [0]))
         mat = xp.reshape(mat, (prod(shape(mat)[:-1]), mat.shape[-1]))
 
         for j in range(middle):
-            cut = (slice(None), slice(j, cur_num*middle, middle))
-            tmp_idxs[cut] = cur_idxs[:,:cur_num]
+            cut = (slice(None), slice(j, cur_num * middle, middle))
+            tmp_idxs[cut] = cur_idxs[:, :cur_num]
         for digit in tshape.digits[i]:
             idx = dim_map[digit.idf]
             for j in range(digit.base):
-                cut = (idx, slice(j, cur_num*middle, digit.base))
+                cut = (idx, slice(j, cur_num * middle, digit.base))
                 tmp_idxs[cut] += digit.factor * j
 
         norms = xp.sqrt(xp.sum(xp.pow(mat, 2), axis=1))
         cur_num = min(num, size(norms))
-        norm_idxs = xp.argsort(norms, descending=True)[:cur_num]# topk behaviour
-        cur_idxs[:,:size(norm_idxs)] = xp.take(tmp_idxs, norm_idxs, axis=1)
+        norm_idxs = xp.argsort(norms, descending=True)[:cur_num]  # topk behaviour
+        cur_idxs[:, : size(norm_idxs)] = xp.take(tmp_idxs, norm_idxs, axis=1)
         mat = xp.take(mat, norm_idxs, axis=0)
-    return cur_idxs[:,0]
+    return cur_idxs[:, 0]
+
 
 def left_sweep[T: ArrayLike](train: TrainBase[T], num: int) -> T:
     xp = namespace_of_trains(train)
@@ -111,10 +117,12 @@ def left_sweep[T: ArrayLike](train: TrainBase[T], num: int) -> T:
     ndims = len(tshape.dims)
     max_middle = max(prod(tshape.middle(i)) for i in range(len(tshape)))
 
-    cur_idxs = xp.zeros((ndims, max_middle*num),
-                        device=train.device, dtype=get_index_dtype(xp))
-    tmp_idxs = xp.zeros((ndims, max_middle*num),
-                        device=train.device, dtype=get_index_dtype(xp))
+    cur_idxs = xp.zeros(
+        (ndims, max_middle * num), device=train.device, dtype=get_index_dtype(xp)
+    )
+    tmp_idxs = xp.zeros(
+        (ndims, max_middle * num), device=train.device, dtype=get_index_dtype(xp)
+    )
     dim_map = {dim.idf: i for i, dim in enumerate(train.shape.dims)}
 
     cur_num = 1
@@ -123,21 +131,21 @@ def left_sweep[T: ArrayLike](train: TrainBase[T], num: int) -> T:
     for i, tn in zip(reversed(range(len(tshape))), reversed(train.data)):
         middle = prod(tshape.middle(i))
         idx = len(tn.shape) - 1
-        mat = xp.tensordot(tn, mat, axes=([idx],[0]))
+        mat = xp.tensordot(tn, mat, axes=([idx], [0]))
         mat = xp.reshape(mat, (mat.shape[0], prod(shape(mat)[1:])))
 
         for j in range(middle):
-            cut = (slice(None), slice(j*cur_num, (j+1)*cur_num))
-            tmp_idxs[cut] = cur_idxs[:,:cur_num]
+            cut = (slice(None), slice(j * cur_num, (j + 1) * cur_num))
+            tmp_idxs[cut] = cur_idxs[:, :cur_num]
         for digit in tshape.digits[i]:
             idx = dim_map[digit.idf]
-            off = (cur_num*middle)//digit.base
+            off = (cur_num * middle) // digit.base
             for j in range(digit.base):
-                cut = (idx, slice(j*off, (j+1)*off))
+                cut = (idx, slice(j * off, (j + 1) * off))
                 tmp_idxs[cut] += digit.factor * j
         norms = xp.sqrt(xp.sum(xp.pow(mat, 2), axis=0))
         cur_num = min(num, size(norms))
-        norm_idxs = xp.argsort(norms, descending=True)[:cur_num]# topk behaviour
-        cur_idxs[:,:size(norm_idxs)] = xp.take(tmp_idxs, norm_idxs, axis=1)
+        norm_idxs = xp.argsort(norms, descending=True)[:cur_num]  # topk behaviour
+        cur_idxs[:, : size(norm_idxs)] = xp.take(tmp_idxs, norm_idxs, axis=1)
         mat = xp.take(mat, norm_idxs, axis=1)
-    return cur_idxs[:,0]
+    return cur_idxs[:, 0]

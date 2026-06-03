@@ -6,14 +6,15 @@ from __future__ import annotations
 from typing import Sequence
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True, init=False)
 class Digit:
     """
     A digit represents a single component of a quantized dimension.
     """
 
-    #-------------------------------------------------------------------------
-    #members & properties
+    # -------------------------------------------------------------------------
+    # members & properties
 
     #: The identifier of the dimension this digit belongs to.
     idf: int
@@ -27,8 +28,8 @@ class Digit:
     #: The factor of the digit, i.e., the product of the bases of all subsequent digits.
     factor: int
 
-    #----------------------------------------------------------------------
-    #constructor
+    # ----------------------------------------------------------------------
+    # constructor
 
     def __init__(self, idf: int, idx: int, base: int, factor: int) -> None:
         self._check_input(idx, base, factor)
@@ -45,15 +46,17 @@ class Digit:
         if idx < 0:
             raise ValueError(f"Index must be positive, but got {idx}")
 
-    #----------------------------------------------------------------------
-    #methods
+    # ----------------------------------------------------------------------
+    # methods
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, Digit)\
-               and self.base == other.base\
-               and self.idx == other.idx\
-               and self.factor == other.factor\
-               and self.idf == other.idf
+        return (
+            isinstance(other, Digit)
+            and self.base == other.base
+            and self.idx == other.idx
+            and self.factor == other.factor
+            and self.idf == other.idf
+        )
 
     def __hash__(self) -> int:
         return hash((self.idf, self.base, self.idx, self.factor))
@@ -61,7 +64,9 @@ class Digit:
     def __str__(self) -> str:
         return f"Digit(base={self.base},factor={self.factor},idx={self.idx},idf={self.idf})"
 
+
 Digits = Sequence[Digit]
+
 
 def digits_similar(d1: Digit, d2: Digit) -> bool:
     return d1.idx == d2.idx and d1.base == d2.base and d1.factor == d2.factor

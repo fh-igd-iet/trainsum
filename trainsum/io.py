@@ -14,6 +14,7 @@ from .uniformgrid import UniformGrid
 from .trainshape import TrainShape
 from .trainbase import TrainBase
 
+
 @overload
 def write(group: h5py.Group, obj: Digit) -> None: ...
 @overload
@@ -26,7 +27,7 @@ def write(group: h5py.Group, obj: Domain) -> None: ...
 def write(group: h5py.Group, obj: UniformGrid) -> None: ...
 @overload
 def write(group: h5py.Group, obj: TrainBase) -> None: ...
-#implementation
+# implementation
 def write(group: h5py.Group, obj: Any) -> None:
     if isinstance(obj, Digit):
         group.attrs["idf"] = obj.idf
@@ -60,6 +61,7 @@ def write(group: h5py.Group, obj: Any) -> None:
         for i, data in enumerate(obj.data):
             group.create_dataset(f"data{i}", data=np.asarray(to_device(data, "cpu")))
 
+
 @overload
 def read(group: h5py.Group, cls: Type[Digit]) -> Digit: ...
 @overload
@@ -71,17 +73,20 @@ def read(group: h5py.Group, cls: Type[Domain]) -> Domain: ...
 @overload
 def read(group: h5py.Group, cls: Type[UniformGrid]) -> UniformGrid: ...
 @overload
-def read[T: ArrayLike](group: h5py.Group, cls: Type[TrainBase[T]], xp: Optional[ArrayNamespace[T]]) -> TrainBase[T]: ...
-#implementation
+def read[T: ArrayLike](
+    group: h5py.Group, cls: Type[TrainBase[T]], xp: Optional[ArrayNamespace[T]]
+) -> TrainBase[T]: ...
+# implementation
 def read(group: h5py.Group, cls: Any, xp: Optional[ArrayNamespace] = None) -> Any:
     if cls == Digit:
-        return Digit(int(get_attr(group, "idf")),
-                     int(get_attr(group, "idx")),
-                     int(get_attr(group, "base")),
-                     int(get_attr(group, "factor")))
+        return Digit(
+            int(get_attr(group, "idf")),
+            int(get_attr(group, "idx")),
+            int(get_attr(group, "base")),
+            int(get_attr(group, "factor")),
+        )
     elif cls == Dimension:
-        return Dimension(get_attr(group, "bases"),
-                         idf=int(get_attr(group, "idf")))
+        return Dimension(get_attr(group, "bases"), idf=int(get_attr(group, "idf")))
     elif cls == TrainShape:
         dims = []
         while f"dim{len(dims)}" in group.keys():
@@ -100,8 +105,7 @@ def read(group: h5py.Group, cls: Any, xp: Optional[ArrayNamespace] = None) -> An
             cores.append(digits)
         return TrainShape(dims, cores)
     elif cls == Domain:
-        return Domain(float(get_attr(group, "lower")),
-                      float(get_attr(group, "upper")))
+        return Domain(float(get_attr(group, "lower")), float(get_attr(group, "upper")))
     elif cls == UniformGrid:
         dims = []
         domains = []
@@ -125,6 +129,7 @@ def read(group: h5py.Group, cls: Any, xp: Optional[ArrayNamespace] = None) -> An
         return TrainBase(shape, data)
 
     raise ValueError("Invalid class.")
+
 
 def get_attr(group: h5py.Group, name: str) -> Any:
     return group.attrs[name]

@@ -7,7 +7,7 @@ name = "trainsum"
 description = "A Python package for dealing with quantics tensor trains"
 readme = "README.rst"
 
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name = "Paul Haubenwallner" },
 ]
@@ -17,7 +17,8 @@ dependencies = [
     "numpy",
     "h5py",
     "array_api_compat",
-    "opt_einsum"
+    "opt_einsum",
+    "pulp[cbc]"
 ]
 
 classifiers = [

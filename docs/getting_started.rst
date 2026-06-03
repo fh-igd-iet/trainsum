@@ -14,7 +14,8 @@ The dependencies are:
     - numpy
     - array_api_compat
     - opt_einsum
-    - hdf5
+    - h5py
+    - pulp[cbc] (you might want to install GLPK for better performance)
 
 Importing the library
 ---------------------

@@ -10,9 +10,9 @@ from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .utils import namespace_of_trains, get_device_dtype
 
+
 @dataclass(frozen=True, init=False)
 class ContractorInput:
-
     idx_map: dict[int, int]
     shapes: Sequence[TrainShape]
     _device: None | Device

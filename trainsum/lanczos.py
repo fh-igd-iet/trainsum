@@ -7,10 +7,11 @@ from dataclasses import dataclass
 from copy import deepcopy
 import time
 
-
+from .utils import inner
 from .matrixeigenvaluedecomposition import MatrixEigenvalueDecomposition
 from .eighsolver import EigHSolver
 from .backend import DType, Device, ArrayLike, namespace_of_arrays, size, shape
+
 
 class LanczosData[T: ArrayLike]:
     device: Device
@@ -19,20 +20,23 @@ class LanczosData[T: ArrayLike]:
     basis: T
     offset: int
     eigvec: T
-    eigval: float
+    eigval: float | complex
 
     def __init__(self, subspace: int, guess: T, states: Sequence[T]) -> None:
         self._check_input(guess, states)
         self.device = guess.device
         self.dtype = guess.dtype
-        self.subspace = min(subspace, size(guess)-len(states))
+        self.subspace = min(subspace, size(guess) - len(states))
 
         xp = namespace_of_arrays(guess)
-        self.basis = xp.zeros((self.subspace+len(states), *guess.shape), 
-                              device=guess.device, dtype=guess.dtype)
+        self.basis = xp.zeros(
+            (self.subspace + len(states), *guess.shape),
+            device=guess.device,
+            dtype=guess.dtype,
+        )
         self.offset = len(states)
         for i, state in enumerate(states):
-            self.basis[i,:] = state
+            self.basis[i, :] = state
         self.eigvec = deepcopy(guess)
 
     def _check_input(self, guess: T, states: Sequence[T]) -> None:
@@ -41,16 +45,18 @@ class LanczosData[T: ArrayLike]:
         if not all(guess.dtype == state.dtype for state in states):
             raise ValueError("All inputs must have the same dtype")
 
+
 @dataclass(kw_only=True)
 class LanczosResult[T: ArrayLike]:
     #: Eigenvector
     array: T
     #: Eigenvalue
-    value: float
+    value: float | complex
     #: Time taken to compute the eigenvector and eigenvalue.
     time: float
     #: Convergence history of the eigenvalues at each step.
-    eps: list[float]
+    eps: list[float | complex]
+
 
 @dataclass
 class Lanczos:
@@ -76,48 +82,45 @@ class Lanczos:
         super().__setattr__(name, value)
 
     def __call__[T: ArrayLike](
-            self,
-            ham: Callable[[T], T],
-            guess: T,
-            states: Sequence[T] = [], /) -> LanczosResult[T]:
+        self, ham: Callable[[T], T], guess: T, states: Sequence[T] = [], /
+    ) -> LanczosResult[T]:
         """
         Solve the eigenvalue problem for some linear map with an initial guess and a set of orthogonal states.
         """
         xp = namespace_of_arrays(guess)
         self._check_input(guess, states)
 
-        if min(self.subspace, size(guess)-len(states)) < len(states):
-            return LanczosResult(array=guess,
-                                 value=float(xp.sum(guess*ham(guess))),
-                                 time=0.0,
-                                 eps=[0.0])
-
+        if min(self.subspace, size(guess) - len(states)) < len(states):
+            return LanczosResult(
+                array=guess,
+                value=inner(guess, ham(guess)),
+                time=0.0,
+                eps=[0.0],
+            )
 
         stamp = time.time()
 
         data = LanczosData(self.subspace, guess, states)
         data.eigvec = deepcopy(guess)
         for i in range(data.offset):
-            self._gram_schmidt(data.basis[i,:], data.basis[:i,:])
-            data.basis[i,:] /= xp.sqrt(xp.sum(data.basis[i,:]*data.basis[i,:]))
+            self._gram_schmidt(data.basis[i, :], data.basis[:i, :])
+            data.basis[i, :] /= xp.sqrt(inner(data.basis[i, :], data.basis[i, :]))
 
-        eps = [float(xp.sum(data.eigvec*ham(data.eigvec)))]
+        eps = [inner(data.eigvec, ham(data.eigvec))]
         for _ in range(self.nsteps):
             self._step(ham, data)
             eps.append(data.eigval)
-            if abs(eps[-1]-eps[-2]) < self.eps:
+            if abs(eps[-1] - eps[-2]) < self.eps:
                 break
 
-        return LanczosResult(array=data.eigvec,
-                             value=float(xp.sum(data.eigvec*ham(data.eigvec))),
-                             time=time.time() - stamp,
-                             eps=eps)
-        
-    def _step[T: ArrayLike](
-            self,
-            mat: Callable[[T], T],
-            data: LanczosData[T]) -> None:
+        return LanczosResult(
+            array=data.eigvec,
+            value=inner(data.eigvec, ham(data.eigvec)),
+            time=time.time() - stamp,
+            eps=eps,
+        )
 
+    def _step[T: ArrayLike](self, mat: Callable[[T], T], data: LanczosData[T]) -> None:
         xp = namespace_of_arrays(data.basis)
         vecs, guess, subspace, off = data.basis, data.eigvec, data.subspace, data.offset
 
@@ -127,43 +130,47 @@ class Lanczos:
 
         vecs[off] = guess
         for j in range(off):
-            val = xp.sum(vecs[off,:] * vecs[j,:])
-            vecs[off,:] = vecs[off,:] - val * vecs[j,:]
-        vecs[off] /= xp.sqrt(xp.sum(vecs[off]*vecs[off]))
+            val = inner(vecs[off, :], vecs[j, :])
+            vecs[off, :] = vecs[off, :] - val * vecs[j, :]
+        vecs[off] /= xp.sqrt(inner(vecs[off], vecs[off]))
 
-        for i in range(off+1, off+subspace):
-            vecs[i,:] = mat(vecs[i-1,:])
-            if i > off+1:
-                vecs[i,:] = vecs[i,:] - b[i-off-2] * vecs[i-2,:]
-            a_val = xp.sum(vecs[i-1,:] * vecs[i,:])
-            a[i-off-1] = a_val
-            vecs[i,:] = vecs[i,:] - a_val * vecs[i-1,:]
-            self._gram_schmidt(vecs[i,:], vecs[:i,:])
+        for i in range(off + 1, off + subspace):
+            vecs[i, :] = mat(vecs[i - 1, :])
+            if i > off + 1:
+                vecs[i, :] = vecs[i, :] - b[i - off - 2] * vecs[i - 2, :]
+            a_val = inner(vecs[i - 1, :], vecs[i, :])
+            a[i - off - 1] = a_val
+            vecs[i, :] = vecs[i, :] - a_val * vecs[i - 1, :]
+            self._gram_schmidt(vecs[i, :], vecs[:i, :])
 
-            b_val = xp.sqrt(xp.sum(vecs[i,:] * vecs[i,:]))
-            vecs[i,:] = vecs[i,:] / b_val
-            b[i-off-1] = b_val
-        a[-1] = xp.sum(vecs[-1,:] * mat(vecs[-1,:]))
+            b_val = xp.sqrt(inner(vecs[i, :], vecs[i, :]))
+            vecs[i, :] = vecs[i, :] / b_val
+            b[i - off - 1] = b_val
+        a[-1] = inner(vecs[-1, :], mat(vecs[-1, :]))
 
-        sub_mat[0,0] = a[0]
-        sub_mat[0,1] = b[0]
-        for i in range(1, data.subspace-1):
-            sub_mat[i,i-1] = b[i-1]
-            sub_mat[i,i] = a[i]
-            sub_mat[i,i+1] = b[i]
-        sub_mat[-1,-1] = a[-1]
-        sub_mat[-1,-2] = b[-2]
+        sub_mat[0, 0] = a[0]
+        sub_mat[0, 1] = b[0]
+        for i in range(1, data.subspace - 1):
+            sub_mat[i, i - 1] = b[i - 1]
+            sub_mat[i, i] = a[i]
+            sub_mat[i, i + 1] = b[i]
+        sub_mat[-1, -1] = a[-1]
+        sub_mat[-1, -2] = b[-2]
 
         eigvals, eigvecs = self.solver(sub_mat)
-        data.eigval = float(eigvals[0])
-        data.eigvec = xp.tensordot(eigvecs[:,0], vecs[off:,...], axes=([0],[0]))
+        if xp.isdtype(eigvals.dtype, "complex floating"):
+            data.eigval = complex(eigvals[0])
+        else:
+            data.eigval = float(eigvals[0])
+        data.eigvec = xp.tensordot(eigvecs[:, 0], vecs[off:, ...], axes=([0], [0]))
 
     def _gram_schmidt[T: ArrayLike](self, vec: T, basis: T) -> None:
-        xp = namespace_of_arrays(vec)
         for i in range(shape(basis)[0]):
-            val = xp.sum(vec * basis[i,:])
-            vec -= val * basis[i,:]
+            val = inner(vec, basis[i, :])
+            vec -= val * basis[i, :]
 
     def _check_input[T: ArrayLike](self, guess: T, states: Sequence[T]) -> None:
         if any(orth.shape != guess.shape for orth in states):
-            raise ValueError("Orthogonal states must have the same dimensions as the initial state")
+            raise ValueError(
+                "Orthogonal states must have the same dimensions as the initial state"
+            )

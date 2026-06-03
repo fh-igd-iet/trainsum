@@ -7,9 +7,12 @@ from .trainbase import TrainBase
 from .utils import symbol_generator
 from .einsum import einsum
 
+
 def matmul[T: ArrayLike](train1: TrainBase[T], train2: TrainBase[T]) -> TrainBase[T]:
     if len(train1.shape.dims) == 1 and len(train2.shape.dims) == 1:
-        raise ValueError("Operands of matmul cannot have both only one dimension (would be a inner product).")
+        raise ValueError(
+            "Operands of matmul cannot have both only one dimension (would be a inner product)."
+        )
     sgen = symbol_generator()
     chars1 = "".join(next(sgen) for _ in range(len(train1.shape.dims)))
     chars2 = "".join(next(sgen) for _ in range(len(train2.shape.dims[1:])))

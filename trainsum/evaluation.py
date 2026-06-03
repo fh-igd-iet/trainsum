@@ -17,8 +17,8 @@ from .utils import check_operand_shapes, get_shapes, shape_map
 from .coreslicing import CoreSlicing
 from .contractor import ArrayContractor, OptimizeKind
 
-class Evaluation:
 
+class Evaluation:
     optimizer: OptimizeKind
     chunk_size: int
     _contr: EinsumContraction
@@ -29,10 +29,11 @@ class Evaluation:
     _res_digits: Sequence[Digits]
 
     def __init__(
-            self,
-            contr: EinsumContraction,
-            optimizer: OptimizeKind = "greedy",
-            chunk_size: int = 1024) -> None:
+        self,
+        contr: EinsumContraction,
+        optimizer: OptimizeKind = "greedy",
+        chunk_size: int = 1024,
+    ) -> None:
         self._contr = contr
         self.optimizer = optimizer
         self.chunk_size = chunk_size
@@ -44,11 +45,9 @@ class Evaluation:
         self._res_digits = []
 
     def __call__[T: ArrayLike](
-            self,
-            idxs: T,
-            *ops: TrainBase[T],
-            expr: bool = False) -> T:
-        #idxs_ = {dim: idxs[char] for char, dim in zip(self._contr.equation.result, self._contr.equation.result_dims)}
+        self, idxs: T, *ops: TrainBase[T], expr: bool = False
+    ) -> T:
+        # idxs_ = {dim: idxs[char] for char, dim in zip(self._contr.equation.result, self._contr.equation.result_dims)}
         idxs_ = {dim: idxs[i] for i, dim in enumerate(self._contr.equation.result_dims)}
         self._check_idxs(idxs_)
 
@@ -68,7 +67,7 @@ class Evaluation:
         res = xp.empty(length, device=device, dtype=dtype)
         for i in range(length // self.chunk_size + 1):
             start = i * self.chunk_size
-            stop = min((i+1) * self.chunk_size, length)
+            stop = min((i + 1) * self.chunk_size, length)
             if start >= stop:
                 break
             chunk_idxs = {digit: vals[start:stop] for digit, vals in dmap.items()}
@@ -94,36 +93,37 @@ class Evaluation:
     # ------------------------------------------------------------------------
     # Contraction generators
 
-    def _contract[T: ArrayLike](
-            self,
-            dmap: dict[Digit, T],
-            *ops: TrainBase[T]) -> T:
+    def _contract[T: ArrayLike](self, dmap: dict[Digit, T], *ops: TrainBase[T]) -> T:
         if self._inp is None:
             raise RuntimeError("Input cannot be None here.")
         xp, device, dtype = self._inp.infos(*ops)
         length = size(next(iter(dmap.values())))
 
-        res = xp.ones((length, *[1]*len(self._contr[0].result.left)),
-                      device=device, dtype=dtype)
+        res = xp.ones(
+            (length, *[1] * len(self._contr[0].result.left)), device=device, dtype=dtype
+        )
         tmp = xp.empty(length, device=device, dtype=dtype)
         for expr, slc, digits in zip(self._exprs, self._core_slicing, self._res_digits):
-            new_res = xp.empty((length, *slc.get_right_shape(*ops)),
-                               device=device, dtype=dtype)
+            new_res = xp.empty(
+                (length, *slc.get_right_shape(*ops)), device=device, dtype=dtype
+            )
             tmp = _get_ids(dmap, digits, tmp)
             for i in range(prod(d.base for d in digits)):
                 mask = xp.where(tmp == i, True, False)
                 if size(mask) == 0:
                     continue
                 mats = slc.get_matrices(i, *ops)
-                new_res[mask,...] = expr(res[mask], *mats)
+                new_res[mask, ...] = expr(res[mask], *mats)
             res = new_res
 
-        return res[:,0]
+        return res[:, 0]
 
     # ------------------------------------------------------------------------
     # Expression builders
 
-    def _expression(self, lcontr: LocalContraction, *shapes: TrainShape) -> ArrayContractor:
+    def _expression(
+        self, lcontr: LocalContraction, *shapes: TrainShape
+    ) -> ArrayContractor:
         tmp = f"{self._tmp_str}{lcontr.result.left}"
         res = f"{self._tmp_str}{lcontr.result.right}"
         ops = []
@@ -135,7 +135,7 @@ class Evaluation:
                 if char in lcontr.result.middle:
                     continue
                 new_mid += char
-                new_shape.append(tn[i+1])
+                new_shape.append(tn[i + 1])
             new_shape.append(tn[-1])
             ops.append(f"{op.left}{new_mid}{op.right}")
             tns.append(new_shape)
@@ -146,14 +146,16 @@ class Evaluation:
         smap[self._tmp_str] = self.chunk_size
         tmp_shape = [smap[char] for char in tmp]
 
-        return ArrayContractor(eq, tmp_shape, *tns,
-                               optimizer=self.optimizer)
+        return ArrayContractor(eq, tmp_shape, *tns, optimizer=self.optimizer)
 
     def _check_idxs[T: ArrayLike](self, idxs: dict[Dimension, T]) -> None:
         if not all(dim in self._contr.equation.result_dims for dim in idxs.keys()):
-            raise ValueError("All dimensions in idxs must be in the result dimensions of the equation.")
+            raise ValueError(
+                "All dimensions in idxs must be in the result dimensions of the equation."
+            )
         if len(set(idxs[dim].shape for dim in idxs.keys())) != 1:
             raise ValueError("All index arrays must have the same .")
+
 
 def _digit_map[T: ArrayLike](idxs: dict[Dimension, T]) -> dict[Digit, T]:
     xp = namespace_of_arrays(next(iter(idxs.values())))
@@ -162,16 +164,18 @@ def _digit_map[T: ArrayLike](idxs: dict[Dimension, T]) -> dict[Digit, T]:
         vals = dim.to_digits(didxs)
         for i, digit in enumerate(dim):
             length = size(vals[i])
-            dmap[digit] = xp.reshape(vals[i,...], (length,))
+            dmap[digit] = xp.reshape(vals[i, ...], (length,))
     return dmap
+
 
 def _get_ids[T: ArrayLike](dmap: dict[Digit, T], digits: Digits, x: T) -> T:
     ncombs = prod(digit.base for digit in digits)
     x[...] = 0
     for digit in digits:
         ncombs //= digit.base
-        x += dmap[digit]*ncombs
+        x += dmap[digit] * ncombs
     return x
+
 
 def _result_digits(lcontr: LocalContraction, *ops: TrainShape) -> Digits:
     dmap = {}
