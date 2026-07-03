@@ -32,7 +32,18 @@ class EinsumExpression[T: ArrayLike]:
         opts = get_options(xp, OptionType.EINSUM)
         if isinstance(opts, ExactOptions):
             self._expr = _EinsumExpression(
-                eq, *ops, method="exact", optimizer=opts.optimizer
+                eq, *ops, method="exact",
+                optimizer=opts.optimizer,
+            )
+        elif isinstance(opts, VariationalOptions):
+            self._expr = _EinsumExpression(
+                eq,
+                *ops,
+                method="variational",
+                decomposition=opts.decomposition,
+                strategy=opts.strategy,
+                optimizer=opts.optimizer,
+                result_shape=result_shape,
             )
         elif isinstance(opts, DecompositionOptions):
             self._expr = _EinsumExpression(
@@ -44,16 +55,6 @@ class EinsumExpression[T: ArrayLike]:
                 optimizer=opts.optimizer,
                 result_shape=result_shape,
                 direction=opts.direction,
-            )
-        elif isinstance(opts, VariationalOptions):
-            self._expr = _EinsumExpression(
-                eq,
-                *ops,
-                method="variational",
-                decomposition=opts.decomposition,
-                strategy=opts.strategy,
-                optimizer=opts.optimizer,
-                result_shape=result_shape,
             )
         elif isinstance(opts, NormationOptions):
             self._expr = _EinsumExpression(

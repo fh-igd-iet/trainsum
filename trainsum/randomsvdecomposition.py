@@ -7,8 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from .backend import ArrayLike, namespace_of_arrays
 from .utils import check_non_neg, check_pos
-from .matrixdecomposition import MatrixDecomposition
-from .svdecomposition import SVDecompositionResult
+from .matrixdecomposition import MatrixDecomposition, MatrixDecompositionResult
 
 
 @dataclass(kw_only=True)
@@ -18,7 +17,6 @@ class RandomSVDecomposition[T: ArrayLike](MatrixDecomposition):
     and cutoff. All singular values below cutoff are discarded, and at most max_rank singular values are kept.
     """
     max_rank: int
-    cutoff: float
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name == "max_rank" and value is not None:
@@ -27,36 +25,33 @@ class RandomSVDecomposition[T: ArrayLike](MatrixDecomposition):
             check_non_neg(name, value)
         super().__setattr__(name, value)
 
-    def right(self, mat: T) -> SVDecompositionResult[T]:
+    def right(self, mat: T) -> MatrixDecompositionResult[T]:
         """Calculate :math:`U \\Sigma V^H` and return :math:`U \\Sigma` and :math:`V^H`."""
-        xp = namespace_of_arrays(mat)
-        u, s, vh = self._svd(mat)
-        u = u * s[xp.newaxis, :]
-        return SVDecompositionResult(left=u, right=vh, singular_values=s)
+        u, vh = self._decomp(mat.mT)
+        return MatrixDecompositionResult(left=vh.mT, right=u.mT)
 
-    def left(self, mat: T) -> SVDecompositionResult[T]:
+    def left(self, mat: T) -> MatrixDecompositionResult[T]:
         """Calculate :math:`U \\Sigma V^H` and return :math:`U` and :math:`\\Sigma V^H`."""
-        xp = namespace_of_arrays(mat)
-        u, s, vh = self._svd(mat)
-        vh = s[:, xp.newaxis] * vh
-        return SVDecompositionResult(left=u, right=vh, singular_values=s)
+        u, vh = self._decomp(mat)
+        return MatrixDecompositionResult(left=u, right=vh)
 
-    def _svd(self, mat: T) -> tuple[T, T, T]:
+    def _decomp(self, mat: T) -> tuple[T, T]:
         xp = namespace_of_arrays(mat)
         if not hasattr(xp, "linalg"):
             raise NotImplementedError(
-                "Linalg extension missing on this backend, implement your own SVDecomposition!."
+                "Linalg extension missing on this backend, implement your own SVDecomposition!"
             )
-        rand_mat = np.random.randn(mat.shape[1], self.max_rank)
+        if hasattr(xp, "randn"):
+            rand_mat = xp.randn(mat.shape[1], self.max_rank, dtype=mat.dtype)
+        elif hasattr(xp, "random"):
+            rand_mat = xp.asarray(xp.random.randn(mat.shape[1], self.max_rank), dtype=mat.dtype)
+        else:
+            raise NotImplementedError("Library is missing random.randn or randn methods.")
         sample_mat = mat @ rand_mat
-        q, _ = xp.linalg.qr(sample_mat)
-        approx = q.T @ mat
+        left, _ = xp.linalg.qr(sample_mat)
+        right = left.T @ mat
 
-        u, s, vh = xp.linalg.svd(approx, full_matrices=False)
-        numel = max(1, min(int(xp.sum(s > self.cutoff)), self.max_rank))
-        u = q @ u[:,:numel]
-
-        return u, s[:numel], vh[:numel, :]
+        return left, right
 
     def left_shape(
         self, shape: tuple[int, int]
@@ -75,4 +70,4 @@ class RandomSVDecomposition[T: ArrayLike](MatrixDecomposition):
         return (m, k), (k, n)
 
     def __repr__(self) -> str:
-        return f"SVDecomposition(max_rank={self.max_rank}, cutoff={self.cutoff})"
+        return f"RandomizedDVDecomposition(max_rank={self.max_rank})"

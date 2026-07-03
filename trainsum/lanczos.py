@@ -10,7 +10,7 @@ import time
 from .utils import inner
 from .matrixeigenvaluedecomposition import MatrixEigenvalueDecomposition
 from .eighsolver import EigHSolver
-from .backend import DType, Device, ArrayLike, namespace_of_arrays, size, shape
+from .backend import DType, Device, ArrayLike, namespace_of_arrays, size, shape, to_device
 
 
 class LanczosData[T: ArrayLike]:
@@ -77,8 +77,10 @@ class Lanczos:
     solver: MatrixEigenvalueDecomposition = EigHSolver()
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name in ("eps", "nsteps", "subspace") and value <= 0:
+        if name in ("nsteps", "subspace") and value <= 0:
             raise ValueError(f"{name} must be a positive number above zero.")
+        elif name == "eps" and value < 0.0:
+            raise ValueError(f"{name} must be a positive number.")
         super().__setattr__(name, value)
 
     def __call__[T: ArrayLike](
@@ -104,13 +106,14 @@ class Lanczos:
         data.eigvec = deepcopy(guess)
         for i in range(data.offset):
             self._gram_schmidt(data.basis[i, :], data.basis[:i, :])
-            data.basis[i, :] /= xp.sqrt(inner(data.basis[i, :], data.basis[i, :]))
+            data.basis[i, :] /= inner(data.basis[i, :], data.basis[i, :])**0.5
 
         eps = [inner(data.eigvec, ham(data.eigvec))]
         for _ in range(self.nsteps):
             self._step(ham, data)
             eps.append(data.eigval)
             if abs(eps[-1] - eps[-2]) < self.eps:
+                #print("broke", eps)
                 break
 
         return LanczosResult(
@@ -126,13 +129,13 @@ class Lanczos:
 
         a = xp.zeros(subspace, dtype=data.dtype)
         b = xp.zeros(subspace, dtype=data.dtype)
-        sub_mat = xp.zeros((data.subspace, data.subspace))
+        sub_mat = xp.zeros((data.subspace, data.subspace), dtype=data.dtype)
 
         vecs[off] = guess
         for j in range(off):
             val = inner(vecs[off, :], vecs[j, :])
             vecs[off, :] = vecs[off, :] - val * vecs[j, :]
-        vecs[off] /= xp.sqrt(inner(vecs[off], vecs[off]))
+        vecs[off] /= inner(vecs[off], vecs[off])**0.5
 
         for i in range(off + 1, off + subspace):
             vecs[i, :] = mat(vecs[i - 1, :])
@@ -143,7 +146,7 @@ class Lanczos:
             vecs[i, :] = vecs[i, :] - a_val * vecs[i - 1, :]
             self._gram_schmidt(vecs[i, :], vecs[:i, :])
 
-            b_val = xp.sqrt(inner(vecs[i, :], vecs[i, :]))
+            b_val = inner(vecs[i, :], vecs[i, :])**0.5
             vecs[i, :] = vecs[i, :] / b_val
             b[i - off - 1] = b_val
         a[-1] = inner(vecs[-1, :], mat(vecs[-1, :]))
@@ -162,7 +165,8 @@ class Lanczos:
             data.eigval = complex(eigvals[0])
         else:
             data.eigval = float(eigvals[0])
-        data.eigvec = xp.tensordot(eigvecs[:, 0], vecs[off:, ...], axes=([0], [0]))
+        tmp = to_device(eigvecs[:,0], vecs.device)
+        data.eigvec = xp.tensordot(tmp, vecs[off:, ...], axes=([0], [0]))
 
     def _gram_schmidt[T: ArrayLike](self, vec: T, basis: T) -> None:
         for i in range(shape(basis)[0]):

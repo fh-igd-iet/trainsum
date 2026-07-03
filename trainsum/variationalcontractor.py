@@ -45,6 +45,7 @@ class VariationalContractor:
     def __call__[T: ArrayLike](
         self, guess: TrainBase[T], *operands: TrainBase[T], expr: bool = False
     ) -> TrainBase[T]:
+
         xp = namespace_of_trains(guess, *operands)
         guess = deepcopy(guess)
         igen = self._inner_gen(guess, *operands, expr=expr)
@@ -57,6 +58,7 @@ class VariationalContractor:
                 data = igen.send((lrange, gen_type))
         finally:
             igen.close()
+            lvec.close()
         return guess
 
     def calc_expressions(

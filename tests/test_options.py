@@ -12,6 +12,7 @@ class TestTensorTrain(unittest.TestCase):
     def test_options(self) -> None:
         opts = [
             (lambda ts: ts.exact(), OptionType.EINSUM),
+            (lambda ts: ts.normation(max_rank=10), OptionType.EINSUM),
             (lambda ts: ts.decomposition(max_rank=10), OptionType.EINSUM),
             (lambda ts: ts.variational(max_rank=10), OptionType.EINSUM),
             (lambda ts: ts.evaluation(), OptionType.EVALUATE),

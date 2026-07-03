@@ -1,45 +1,22 @@
-from typing import Sequence, Any
+from typing import Any
 import unittest
 from itertools import product
 from copy import deepcopy
 
 from trainsum import TrainSum
-from trainsum.typing import UniformGrid, TrainShape
-from utils import backends, rand_data
+from utils import (
+    backends,
+    get_grid,
+    get_idxs,
+    rand_cores,
+    assert_relative_error_less,
+)
 
 
 class TestTensorTrain(unittest.TestCase):
     def setUp(self):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [(120,), (280,), (1024,), (120, 1024), (324, 120)]
-
-    def get_grid(self, ts, sizes: Sequence[int], lower: float, upper: float):
-        dims = [ts.dimension(size) for size in sizes]
-        domains = [ts.domain(lower, upper) for _ in sizes]
-        return ts.uniform_grid(dims, domains)
-
-    def get_idxs(self, ts, grid: UniformGrid):
-        xp = ts.namespace
-        idxs = xp.zeros(
-            [len(grid.dims), *[dim.size() for dim in grid.dims]], dtype=ts.index_type
-        )
-        for i, dim in enumerate(grid.dims):
-            cut = (
-                *(xp.newaxis,) * i,
-                slice(None),
-                *(xp.newaxis,) * (len(grid.dims) - i - 1),
-            )
-            idxs[i] += xp.arange(dim.size(), dtype=ts.index_type)[cut]
-        return idxs
-
-    def rand_cores(self, ts: TrainSum, shape: TrainShape):
-        xp = ts.namespace
-        cores = []
-        for i in range(len(shape)):
-            left = 1 if i == 0 else 10
-            right = 1 if i == len(shape) - 1 else 10
-            cores.append(xp.asarray(rand_data(xp, left, *shape.middle(i), right)))
-        return cores
 
     def left_contract(self, ts: TrainSum, train: Any, idx: int):
         xp = ts.namespace
@@ -64,11 +41,11 @@ class TestTensorTrain(unittest.TestCase):
             xp = ts.namespace
 
             shape1 = ts.trainshape(*sizes1, mode="block")
-            cores1 = self.rand_cores(ts, shape1)
+            cores1 = rand_cores(ts, shape1)
             train1 = ts.tensortrain(shape1, cores1)
 
             shape2 = ts.trainshape(*sizes2, mode="interleaved")
-            cores2 = self.rand_cores(ts, shape2)
+            cores2 = rand_cores(ts, shape2)
             train2 = ts.tensortrain(shape2, cores2)
 
             res = deepcopy(train1)
@@ -89,7 +66,7 @@ class TestTensorTrain(unittest.TestCase):
             ctype = xp.__array_namespace_info__().dtypes()["complex128"]
 
             shape = ts.trainshape(*sizes, mode="block")
-            cores = self.rand_cores(ts, shape)
+            cores = rand_cores(ts, shape)
             train = ts.tensortrain(shape, cores)
             train.dtype = ctype
 
@@ -105,7 +82,7 @@ class TestTensorTrain(unittest.TestCase):
             xp = ts.namespace
 
             shape = ts.trainshape(*sizes, mode="block")
-            cores = self.rand_cores(ts, shape)
+            cores = rand_cores(ts, shape)
             train = ts.tensortrain(shape, cores)
 
             for i in range(len(shape)):
@@ -124,7 +101,7 @@ class TestTensorTrain(unittest.TestCase):
     def test_truncate(self) -> None:
         for ts, sizes in product(self.trainsum, self.sizes):
             shape = ts.trainshape(*sizes, mode="block")
-            cores = self.rand_cores(ts, shape)
+            cores = rand_cores(ts, shape)
             train = ts.tensortrain(shape, cores)
 
             with ts.decomposition(max_rank=5):
@@ -138,8 +115,8 @@ class TestTensorTrain(unittest.TestCase):
     def test_transform(self) -> None:
         for ts, sizes in product(self.trainsum, self.sizes):
             xp = ts.namespace
-            grid = self.get_grid(ts, sizes, -10.0, 10.0)
-            idxs = self.get_idxs(ts, grid)
+            grid = get_grid(ts, sizes, -10.0, 10.0)
+            idxs = get_idxs(ts, grid)
             coords = grid.to_coords(idxs)
 
             data = xp.sum(coords**2, axis=0)
@@ -156,28 +133,72 @@ class TestTensorTrain(unittest.TestCase):
             diff = xp.sum((exact - approx) ** 2) / xp.sum(exact**2)
             self.assertLess(diff, 1e-5)
 
-    def test_assign(self) -> None:
+    def test_getitem(self) -> None:
         for ts, sizes in product(self.trainsum, self.sizes):
             xp = ts.namespace
             shape = ts.trainshape(*sizes, mode="block")
-            cores = self.rand_cores(ts, shape)
+            cores = rand_cores(ts, shape)
             train = ts.tensortrain(shape, cores)
+            exact = train.to_tensor()
 
-            for i in [2, 4]:
+            point = tuple(size // 2 for size in sizes)
+            point_val = train[point]
+            assert_relative_error_less(self, ts, exact[point], point_val[0], 1e-12)
 
-                sl = [slice(16, None, i) for _ in sizes]
-    
+            slice_cut = tuple(slice(size // 4, None, 2) for size in sizes)
+            slice_train = train[slice_cut]
+            self.assertEqual(slice_train.to_tensor().shape, exact[slice_cut].shape)
+            assert_relative_error_less(
+                self, ts, exact[slice_cut], slice_train.to_tensor(), 5e-5
+            )
+
+            ellipsis_train = train[..., slice(sizes[-1] // 4, None, 3)]
+            assert_relative_error_less(
+                self,
+                ts,
+                exact[..., slice(sizes[-1] // 4, None, 3)],
+                ellipsis_train.to_tensor(),
+                5e-5,
+            )
+
+            singletons = tuple(slice(idx, idx + 1) for idx in point)
+            single_val = train[singletons]
+            assert_relative_error_less(self, ts, exact[singletons], single_val, 1e-12)
+
+            vec_cut = tuple(
+                xp.asarray([0, size // 2, size - 1], dtype=ts.index_type)
+                for size in sizes
+            )
+            vec_val = train[vec_cut]
+            assert_relative_error_less(self, ts, exact[vec_cut], vec_val, 1e-12)
+
+            idxs = xp.stack(vec_cut, axis=0)
+            idx_val = train[idxs]
+            assert_relative_error_less(self, ts, exact[vec_cut], idx_val, 1e-12)
+
+    def test_assign(self) -> None:
+        for ts, sizes in product(self.trainsum, self.sizes):
+            shape = ts.trainshape(*sizes, mode="block")
+            cores = rand_cores(ts, shape)
+            base_train = ts.tensortrain(shape, cores)
+
+            cuts = [tuple(slice(16, None, step) for _ in sizes) for step in [2, 4]]
+            cuts.append((Ellipsis, slice(16, None, 3)))
+            if len(sizes) > 1:
+                cuts.append((slice(16, None, 3), slice(None)))
+
+            for cut in cuts:
+                train = deepcopy(base_train)
                 exact = train.to_tensor()
-                exact[*sl] = exact[*sl]**2
+                exact[cut] = exact[cut] ** 2
 
                 decomp = ts.qrdecomposition()
                 with ts.decomposition(decomposition=decomp):
-                    sl_train = train[*sl]**2
-                    train[*sl] = sl_train
+                    sl_train = train[cut] ** 2
+                    train[cut] = sl_train
                 approx = train.to_tensor()
 
-                diff = xp.sum((exact - approx) ** 2) / xp.sum(exact**2)
-                self.assertLess(diff, 1e-5)
+                assert_relative_error_less(self, ts, exact, approx, 5e-5)
 
 
 if __name__ == "__main__":

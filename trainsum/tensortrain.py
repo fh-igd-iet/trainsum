@@ -6,7 +6,7 @@ from typing import Self, Callable, overload, Sequence, Optional, Any
 from types import EllipsisType
 from copy import deepcopy
 
-from .backend import ArrayLike, Device, DType, ArrayNamespace, get_index_dtype
+from .backend import ArrayLike, Device, DType, ArrayNamespace, get_index_dtype, size
 from .trainshape import TrainShape
 from .trainbase import TrainBase
 from .utils import symbol_generator, namespace_of_trains
@@ -24,7 +24,7 @@ from .truncate import truncate
 from .trainslice import trainslice
 from trainsum.assign import assign
 
-IndexType = slice | EllipsisType
+IndexType = int | slice | EllipsisType
 
 
 class TensorTrain[S: ArrayLike]:
@@ -150,14 +150,14 @@ Should not be instantiated directly, but rather through the `tensortrain` functi
     # ------------------------------------------------------------------------
     # cross based
 
-    def __ipow__(self, power: int, /) -> Self:
+    def __ipow__(self, power: float, /) -> Self:
         if power == 2:
             return self.__imul__(self)
 
         self._base = transform(self._base, lambda x: x**power)
         return self
 
-    def __pow__(self, power: int, /) -> Self:
+    def __pow__(self, power: float, /) -> Self:
         return deepcopy(self).__ipow__(power)
 
     def __abs__(self) -> Self:
@@ -168,7 +168,7 @@ Should not be instantiated directly, but rather through the `tensortrain` functi
     # getter & setter
 
     @overload
-    def __getitem__(self, cut: int | S | tuple[int, ...] | tuple[S, ...], /) -> S: ...
+    def __getitem__(self, cut: int | S | tuple[int | S, ...], /) -> S: ...
     @overload
     def __getitem__(
         self, cut: IndexType | tuple[IndexType, ...], /
@@ -182,16 +182,29 @@ Should not be instantiated directly, but rather through the `tensortrain` functi
         if any(isinstance(c, (slice, EllipsisType)) for c in cut):
             cut = self._get_cut(cut)
             base = trainslice(self._base, cut)
+            if not isinstance(base, TrainBase):
+                return xp.asarray(base)
             return type(self)(base, copy_data=False)
 
-        if all(isinstance(c, int) for c in cut):
-            if len(cut) != len(self._base.shape.dims):
-                raise IndexError(
-                    "Number of indices must match the number of dimensions."
-                )
-            idxs = xp.asarray(cut, dtype=get_index_dtype(xp))[:, xp.newaxis]
+        if len(cut) == len(self._base.shape.dims):
+            num = 1
+            for c in cut:
+                if not isinstance(c, int):
+                    num = size(c)
+            tmp = []
+            for c in cut:
+                if isinstance(c, int):
+                    ar = xp.full(num, c, dtype=get_index_dtype(xp))
+                else:
+                    ar = xp.asarray(c, dtype=get_index_dtype(xp))
+                tmp.append(ar)
+            idxs = xp.stack(tmp, axis=0)
+        elif cut[0].shape[0] == len(self._base.shape.dims):
+            idxs = xp.asarray(cut[0], dtype=get_index_dtype(xp))
         else:
-            idxs = xp.stack(list(cut), axis=0)
+            raise IndexError(
+                "Invalid index shape. Must be either (ndim, N) or a tuple of length ndim."
+            )
 
         sgen = symbol_generator()
         chars = "".join(next(sgen) for _ in range(len(self._base.shape.dims)))

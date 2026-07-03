@@ -14,12 +14,14 @@ from .sweepingstrategy import SweepingStrategy
 from .contractor import OptimizeKind, DEFAULT_OPTIMIZER
 from .einsumequation import EinsumEquation
 from .linearmapgenerator import LinearMapGenerator
+from .explicit_linearmapgenerator import ExplicitLinearMapGenerator
 from .generatorcallabletype import GeneratorCallableType
 
 
 class LinearMap[T: ArrayLike]:
     optimizer: OptimizeKind
     _ops: Sequence[TrainBase]
+    _explicit: bool
 
     @property
     def result(self) -> TrainShape:
@@ -30,8 +32,10 @@ class LinearMap[T: ArrayLike]:
         eq: str,
         *ops: TrainShape | TrainBase[T],
         optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+        explicit: bool = False,
     ) -> None:
         self.optimizer = deepcopy(optimizer)
+        self._explicit = explicit
         self._ops, self._map_gen = self._get_map_gen(eq, *ops)
 
     def __call__(
@@ -49,7 +53,7 @@ class LinearMap[T: ArrayLike]:
 
     def _get_map_gen(
         self, eq: str, *ops: TrainShape | TrainBase[T]
-    ) -> tuple[Sequence[TrainBase], LinearMapGenerator]:
+    ) -> tuple[Sequence[TrainBase], LinearMapGenerator | ExplicitLinearMapGenerator]:
         idx = self._ref_idx(*ops)
         ops_, guess = self._split_ops(idx, *ops)
 
@@ -60,7 +64,11 @@ class LinearMap[T: ArrayLike]:
 
         einsum_eq = EinsumEquation(eq, *[op.shape for op in ops_], guess)
         contr = EinsumContraction(einsum_eq)
-        return ops_, LinearMapGenerator(contr, idx, optimizer=self.optimizer)
+        if self._explicit:
+            return ops_, ExplicitLinearMapGenerator(contr, idx, optimizer=self.optimizer)
+        else:
+            return ops_, LinearMapGenerator(contr, idx, optimizer=self.optimizer)
+
 
     def _split_ops(
         self, idx: int, *ops: TrainShape | TrainBase

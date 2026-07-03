@@ -8,7 +8,6 @@ from .backend import ArrayLike, namespace_of_arrays
 from .matrixdecomposition import MatrixDecompositionResult
 from .utils import check_non_neg, check_pos
 
-
 @dataclass(kw_only=True)
 class SVDecompositionResult[T: ArrayLike](MatrixDecompositionResult[T]):
     #: Left matrix of the decomposition.
@@ -56,6 +55,7 @@ class SVDecomposition[T: ArrayLike]:
             raise NotImplementedError(
                 "Linalg extension missing on this backend, implement your own SVDecomposition!."
             )
+
         u, s, vh = xp.linalg.svd(mat, full_matrices=False)
         numel = max(1, min(int(xp.sum(s > self.cutoff)), self.max_rank))
         return u[...,:numel], s[...,:numel], vh[...,:numel,:]

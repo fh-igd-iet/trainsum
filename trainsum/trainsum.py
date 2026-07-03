@@ -6,7 +6,6 @@ from typing import Literal, Sequence, overload, Any, Type, Callable, Optional
 from types import NoneType
 from dataclasses import dataclass
 import h5py
-import pulp as pl
 
 from .backend import ArrayLike, get_index_dtype, get_namespace
 from .direction import Direction
@@ -100,9 +99,10 @@ class LinearMap[NDArray: ArrayLike]:
         eq: str,
         *ops: TrainShape | TensorTrain[NDArray],
         optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+        explicit: bool = False,
     ) -> None:
         ops_ = [op._base if isinstance(op, TensorTrain) else op for op in ops]
-        self._map = _LinearMap(eq, *ops_, optimizer=optimizer)
+        self._map = _LinearMap(eq, *ops_, optimizer=optimizer, explicit=explicit)
 
 
 @dataclass(init=False)
@@ -396,12 +396,12 @@ class TrainSum[NDArray: Any]:
         return SVDecomposition(max_rank=max_rank, cutoff=cutoff)
 
     def rand_svdecomposition(
-        self, max_rank: int, cutoff: float = 1e-10
+        self, max_rank: int
     ) -> RandomSVDecomposition[NDArray]:
         """
         Randomized singular value decomposition for matrices.
         """
-        return RandomSVDecomposition(max_rank=max_rank, cutoff=cutoff)
+        return RandomSVDecomposition(max_rank=max_rank)
 
 
     def qrdecomposition(self) -> QRDecomposition[NDArray]:
@@ -699,9 +699,10 @@ class TrainSum[NDArray: Any]:
         eq: str,
         *ops: TrainShape | TensorTrain[NDArray],
         optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+        explicit: bool = False,
     ) -> LinearMap[NDArray]:
         """Linear map for variational solvers."""
-        return LinearMap(eq, *ops, optimizer=optimizer)
+        return LinearMap(eq, *ops, optimizer=optimizer, explicit=explicit)
 
     def lanczos(
         self,
@@ -736,6 +737,7 @@ class TrainSum[NDArray: Any]:
         solver: LocalEigSolver[T] = Lanczos(),
         decomposition=SVDecomposition(),
         strategy: SweepingStrategy = SweepingStrategy(ncores=2, nsweeps=10),
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
     ) -> EigSolver[NDArray, LocalEigSolverResult]:
         """
         Variational eigenvalue solver for quantics tensor trains.
@@ -746,7 +748,7 @@ class TrainSum[NDArray: Any]:
             solver=solver,
             decomposition=decomposition,
             strategy=strategy,
-            optimizer=DEFAULT_OPTIMIZER,
+            optimizer=optimizer,
         )
 
     def linsolver[T: LocalLinSolverResult](
@@ -871,7 +873,7 @@ class TrainSum[NDArray: Any]:
         self,
         decomposition: T,
         max_rank: int,
-        relative_cutoff: float = 1e-15,
+        cutoff: float = 1e-15,
         direction: Direction = Direction.TO_RIGHT,
         optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
     ) -> NormationOptions[T]: ...
@@ -887,7 +889,7 @@ class TrainSum[NDArray: Any]:
     def normation(
         self,
         max_rank: int,
-        relative_cutoff: float = 1e-15,
+        cutoff: float = 1e-15,
         optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
         direction: Direction = Direction.TO_RIGHT,
         decomposition: Optional[Any] = None,
@@ -903,7 +905,7 @@ class TrainSum[NDArray: Any]:
             decomposition=decomposition,
             optimizer=optimizer,
             max_rank=max_rank,
-            cutoff=relative_cutoff,
+            cutoff=cutoff,
             direction=direction,
         )
 

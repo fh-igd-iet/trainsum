@@ -37,7 +37,7 @@ def dwt[T: ArrayLike](
     coeffs_ar1 = xp.asarray(coeffs)[xp.newaxis, :, xp.newaxis]
     coeff_train1 = TrainBase(trainshape(dims[-1]), [coeffs_ar1])
 
-    coeffs_ar2 = coeffs_ar1[:, ::-1, :]
+    coeffs_ar2 = xp.flip(coeffs_ar1, axis=1)
     coeffs_ar2[0, 1::2, 0] *= -1
     coeff_train2 = TrainBase(trainshape(dims[-1]), [coeffs_ar2])
 

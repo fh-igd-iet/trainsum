@@ -135,12 +135,12 @@ class DecompositionContractor:
 
             while lidx < len(shape) - 1 and self._cmap[lidx] < ref_idx:
                 split = 1 + len(shape.middle(lidx))
-                # left, tmp = tn_decomp.left(tmp, split)
                 res = tn_decomp.left(tmp, split)
                 left, tmp = res.left, res.right
                 data.append(left)
                 norm.append(Normalization.LEFT)
                 lidx += 1
+
         data.append(tmp)
         norm.append(Normalization.NONE)
 

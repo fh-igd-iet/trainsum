@@ -187,44 +187,37 @@ class RangeIntegerEquation(IntegerEquation):
         return num
 
     def _upper_lower(self, idx: int) -> tuple[bool, list[int], list[int]]:
-        dim, evaled, x, off, tmp = self.dims[idx], self.evaluated[idx], [], 0, []
-        min_prob = pl.LpProblem("RangeEquation", pl.LpMinimize)
-        for digit, ev in zip(dim, evaled):
-            if ev is None:
-                tmp.append(digit.factor)
-                x.append(int(digit.factor) * min_prob.add_variable(
-                    f"x_{len(x)}",
-                    lowBound=0,
-                    upBound=digit.base - 1,
-                    cat="Integer",
-                ))
-            else:
-                off += digit.factor * ev
-        min_prob += pl.lpSum(x), "Objective"
-        min_prob += pl.lpSum(x) >= self.lower[idx]-off, f"LowerBound"
-        min_prob += pl.lpSum(x) <= self.upper[idx]-off-1, f"UpperBound"
-        min_prob.solve(self._solver)
-        lower = [pl.value(var)//val for var, val in zip(x, tmp)]
-        lower_solvable = pl.LpStatus[min_prob.status] == "Optimal"
+        dim, evaled = self.dims[idx], self.evaluated[idx]
 
-        max_prob = pl.LpProblem("RangeEquation", pl.LpMaximize)
-        for digit, ev in zip(dim, evaled):
-            if ev is None:
-                tmp.append(digit.factor)
-                x.append(int(digit.factor) * max_prob.add_variable(
-                    f"x_{len(x)}",
-                    lowBound=0,
-                    upBound=digit.base - 1,
-                    cat="Integer",
-                ))
-            else:
-                off += digit.factor * ev
-        max_prob += pl.lpSum(x), "Objective"
-        max_prob += pl.lpSum(x) >= self.lower[idx]-off, f"LowerBound"
-        max_prob += pl.lpSum(x) <= self.upper[idx]-off-1, f"UpperBound"
-        max_prob.solve(self._solver)
-        upper = [pl.value(var)//val for var, val in zip(x, tmp)]
-        upper_solvable = pl.LpStatus[max_prob.status] == "Optimal"
+        def solve_problem(sense: int) -> tuple[bool, list[int]]:
+            variables = []
+            factors = []
+            offset = 0
+            problem = pl.LpProblem("RangeEquation", sense)
+            for digit, ev in zip(dim, evaled):
+                if ev is None:
+                    factors.append(digit.factor)
+                    variables.append(
+                        int(digit.factor)
+                        * problem.add_variable(
+                            f"x_{len(variables)}",
+                            lowBound=0,
+                            upBound=digit.base - 1,
+                            cat="Integer",
+                        )
+                    )
+                else:
+                    offset += digit.factor * ev
+            problem += pl.lpSum(variables), "Objective"
+            problem += pl.lpSum(variables) >= self.lower[idx] - offset, "LowerBound"
+            problem += pl.lpSum(variables) <= self.upper[idx] - offset - 1, "UpperBound"
+            problem.solve(self._solver)
+            solvable = pl.LpStatus[problem.status] == "Optimal"
+            solution = [pl.value(var) // val for var, val in zip(variables, factors)]
+            return solvable, solution
+
+        lower_solvable, lower = solve_problem(pl.LpMinimize)
+        upper_solvable, upper = solve_problem(pl.LpMaximize)
         return lower_solvable and upper_solvable, lower, upper
 
     def _get_evaled(self) -> tuple[tuple[bool, ...], ...]:

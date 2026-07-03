@@ -17,18 +17,23 @@ from .binarytrain import binary_train
 
 
 def slice_vector[T: ArrayLike](
-    xp: ArrayNamespace[T], dim: Dimension, slc: slice, /
+    xp: ArrayNamespace[T], dim: Dimension, slc: int | slice, /
 ) -> TrainBase[T]:
 
     dims = (dim,)
-    start = int(slc.start) if slc.start is not None else 0
-    stop = int(slc.stop) if slc.stop is not None else dim.size()
-    step = int(slc.step) if slc.step is not None else 1
+    if isinstance(slc, int):
+        start = slc
+        stop = slc + 1
+        step = 1
+    else:
+        start = int(slc.start) if slc.start is not None else 0
+        stop = int(slc.stop) if slc.stop is not None else dim.size()
+        step = int(slc.step) if slc.step is not None else 1
 
     eqs = []
     eqs.append(RangeIntegerEquation(dims, (start,), (stop,)))
     if step > 1:
-        eqs.append(ModuloIntegerEquation(dims, (step,), 0))
+        eqs.append(ModuloIntegerEquation(dims, (step,), start%step))
     eq = IntegerEquations(dims, eqs)
 
     shape = trainshape(dim)
@@ -42,6 +47,8 @@ def slice_operator[T: ArrayLike](
     start = int(slc.start) if slc.start is not None else 0
     stop = int(slc.stop) if slc.stop is not None else dim.size()
     step = int(slc.step) if slc.step is not None else 1
+    if stop - start == 1:
+        raise ValueError("Slice operator requires at least two elements in the slice.")
 
     size = ceil((stop - start) / step)
     ndim = Dimension(size)

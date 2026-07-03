@@ -190,6 +190,50 @@ class TestEinsum(unittest.TestCase):
 
             self.compare(ts, "a,ab,b->ab", op1, op3, op2)
 
+    def test_direct_wrappers(self) -> None:
+        for ts in self.trainsum:
+            xp = ts.namespace
+            dim = ts.dimension(2**6)
+
+            mat = ts.shift(dim, 2)
+            vec1 = self.poly_val(ts, dim, [1.0, 0.0, 0.0])
+            vec2 = self.poly_val(ts, dim, [0.5, 1.0, 0.0])
+            vec3 = self.poly_val(ts, dim, [0.25, -0.5, 0.0])
+
+            with ts.exact():
+                train = ts.einsum("ab,b->a", mat, vec1)
+                self.compare_vals(ts, "einsum", "ab,b->a", train, mat, vec1)
+
+                scalar = ts.einsum("a,a->", vec1, vec2)
+                self.compare_vals(ts, "einsum scalar", "a,a->", scalar, vec1, vec2)
+
+                added = ts.add(vec1, vec2, vec3)
+                exact = vec1.to_tensor() + vec2.to_tensor() + vec3.to_tensor()
+                diff = xp.sum((added.to_tensor() - exact) ** 2) / xp.sum(exact**2)
+                self.assertLess(diff, 1e-12)
+
+            outer = ts.outer(vec1, vec2)
+            exact = oe.contract("a,b->ab", vec1.to_tensor(), vec2.to_tensor())
+            diff = xp.sum((outer.to_tensor() - exact) ** 2) / xp.sum(exact**2)
+            self.assertLess(diff, 1e-12)
+
+            idxs = xp.arange(dim.size(), dtype=ts.index_type)[xp.newaxis, :]
+            approx = ts.evaluate("ab,b->a", idxs, mat, vec1)
+            exact = oe.contract("ab,b->a", mat.to_tensor(), vec1.to_tensor())
+            diff = xp.sum((approx - exact) ** 2) / xp.sum(exact**2)
+            self.assertLess(diff, 1e-13)
+
+    def test_normation(self) -> None:
+        for ts in self.trainsum:
+            dim = ts.dimension(2**6)
+            mat = ts.shift(dim, 2)
+            vec = self.poly_val(ts, dim, [1.0, 0.0, 0.0])
+
+            with ts.normation(max_rank=8, cutoff=1e-15):
+                train = ts.einsum("ab,b->a", mat, vec)
+
+            self.compare_vals(ts, "normation", "ab,b->a", train, mat, vec)
+
 
 if __name__ == "__main__":
     unittest.main()

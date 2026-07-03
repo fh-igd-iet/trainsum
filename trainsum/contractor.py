@@ -21,7 +21,7 @@ OptimizeKind = Literal[
     "auto",
     "auto-hq",
 ]
-DEFAULT_OPTIMIZER: OptimizeKind = "greedy"
+DEFAULT_OPTIMIZER: OptimizeKind = "random-greedy-128"
 
 
 class ArrayContractor[T: ArrayLike]:
@@ -53,6 +53,7 @@ class ArrayContractor[T: ArrayLike]:
             self._expr = lambda: res
         else:
             self._expr = oe.contract_expression(eq, *self._shapes, optimize=optimizer)
+            self._eq = eq
             # print(str(self._expr).split("\n")[0])
 
     def __call__(self, *ops: T) -> T:
@@ -64,4 +65,7 @@ class ArrayContractor[T: ArrayLike]:
             return self._expr()  # type: ignore
         for idx, op in zip(self._idxs, ops):
             self._ops[idx] = op
-        return self._expr(*self._ops)  # type: ignore
+        res = self._expr(*self._ops)
+        for idx, op in zip(self._idxs, ops):
+            self._ops[idx] = None
+        return res

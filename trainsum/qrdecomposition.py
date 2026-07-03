@@ -6,7 +6,6 @@ from .backend import ArrayLike
 from .backend import namespace_of_arrays
 from .matrixdecomposition import MatrixDecompositionResult
 
-
 class QRDecomposition[T: ArrayLike]:
     """
     QR decomposition. Decomposes a matrix into an orthonormal matrix and an upper triangular matrix.
@@ -14,12 +13,8 @@ class QRDecomposition[T: ArrayLike]:
 
     def right(self, mat: T) -> MatrixDecompositionResult[T]:
         """Calculate :math:`M=QR` and return :math:`Q` and :math:`R`."""
-        xp = namespace_of_arrays(mat)
         q, r = self._qr(mat.mT)
         return MatrixDecompositionResult(left=r.mT, right=q.mT)
-        #q, r = self._qr(mat.T)
-        # return r.T, q.T
-        #return MatrixDecompositionResult(left=r.T, right=q.T)
 
     def left(self, mat: T) -> MatrixDecompositionResult[T]:
         """Calculate :math:`M=LQ` and return :math:`L` and :math:`Q`."""
@@ -32,6 +27,11 @@ class QRDecomposition[T: ArrayLike]:
             raise NotImplementedError(
                 "Linalg extension missing on this backend, implement your own QRDecomposition!."
             )
+
+        #if min(mat.shape) < 10:
+        #    u, s, vh = gram_svd(mat, 0.0, min(mat.shape))
+        #    return u, s[..., xp.newaxis] * vh
+
         q, r = xp.linalg.qr(mat, mode="reduced")
         return q, r
 

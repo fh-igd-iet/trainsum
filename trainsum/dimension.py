@@ -73,7 +73,7 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         """
         xp = namespace_of_arrays(digits)
         int_type = get_index_dtype(xp)
-        self._check_dtype(int_type, digits)
+        digits = xp.astype(digits, int_type)
         if digits.shape[0] != len(self):
             raise ValueError(f"Expect a tensor of shape ({len(self)}, ...)")
         trans = xp.asarray(
@@ -88,17 +88,13 @@ class Dimension[T: ArrayLike](SequenceOf[Digit]):
         """
         xp = namespace_of_arrays(idxs)
         int_type = get_index_dtype(xp)
-        self._check_dtype(int_type, idxs)
+        idxs = xp.astype(idxs, int_type)
         digits = xp.zeros((len(self), *idxs.shape), dtype=int_type, device=device(idxs))
         idxs = deepcopy(idxs)
         for i, digit in enumerate(reversed(self)):
             digits[(len(self) - i - 1, ...)] = idxs % digit.base
             idxs = idxs // digit.base
         return digits
-
-    def _check_dtype(self, index_dtype: DType, inp: ArrayLike) -> None:
-        if inp.dtype != index_dtype:
-            raise ValueError(f"Input should have dtype={index_dtype}")
 
     # -------------------------------------------------------------------------
     # some magic

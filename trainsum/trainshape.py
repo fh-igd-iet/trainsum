@@ -77,6 +77,9 @@ class TrainShape:
     # ------------------------------------------------------------------------
     # shape getter
 
+    def max_rank(self) -> int:
+        return max(self._exact_ranks())
+
     def left_rank(self, idx: int) -> int:
         """Get the left rank of the core at index idx."""
         idx = transform_index(idx, len(self))

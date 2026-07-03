@@ -17,6 +17,7 @@ class TestWavelet(unittest.TestCase):
         #self.sizes = [8]
 
     def ground_truth(self, xp, coefficients: Sequence[float], n: int):
+        coefficients = xp.asarray(coefficients)
         n_coeffs = len(coefficients)
         mat = xp.zeros((n, n))
         for i, j in enumerate(range(0, n, 2)):
@@ -24,7 +25,7 @@ class TestWavelet(unittest.TestCase):
             mat[i, js] = coefficients
         odds = xp.ones(n_coeffs)
         odds[1::2] = odds[1::2] * -1
-        rcoeffs = coefficients[::-1] * odds
+        rcoeffs = xp.flip(coefficients) * odds
         for i, j in enumerate(range(0, n, 2)):
             i += n // 2
             js = [x % n for x in range(j, j + n_coeffs)]
@@ -40,6 +41,19 @@ class TestWavelet(unittest.TestCase):
             approx = train.to_tensor()
 
             exact = self.ground_truth(xp, coeffs, size)
+            diff = abs(xp.sum((exact - approx) ** 2))
+
+            self.assertLess(diff, 1e-10)
+
+    def test_inverse_wavelet(self):
+        for coeffs, ts, size in product(self.coeffs, self.trainsum, self.sizes):
+            xp = ts.namespace
+            dim = ts.dimension(size)
+
+            train = ts.idwt(dim, coeffs)
+            approx = train.to_tensor()
+
+            exact = self.ground_truth(xp, coeffs, size).T
             diff = abs(xp.sum((exact - approx) ** 2))
 
             self.assertLess(diff, 1e-10)

@@ -62,6 +62,7 @@ class UniformGrid[T: ArrayLike]:
         """Convert from index representation to coordinate representation."""
         xp = namespace_of_arrays(idxs)
         int_type = get_index_dtype(xp)
+        idxs = xp.asarray(idxs, dtype=int_type, device=idxs.device)
         self._check_input_tensor(idxs, int_type)
         coords = xp.zeros(idxs.shape, device=idxs.device)
         for i, (dim, domain) in enumerate(zip(self.dims, self.domains)):

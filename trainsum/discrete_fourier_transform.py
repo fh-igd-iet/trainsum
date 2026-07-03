@@ -104,7 +104,7 @@ def fft_layer[T: ArrayLike](
 
 
 def qftshift[T: ArrayLike](train: TrainBase[T], axis: int = 0) -> TrainBase[T]:
-    if 0 < axis < len(train.shape.dims):
+    if 0 > axis or axis >= len(train.shape.dims):
         raise ValueError("Axis out of range.")
     dim = train.shape.dims[axis]
     xp = namespace_of_trains(train)

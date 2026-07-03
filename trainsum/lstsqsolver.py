@@ -18,4 +18,7 @@ class LstsqSolver:
             raise NotImplementedError(
                 f"Method linalg.lstsq is not implemented for backend {xp}."
             )
+        if array_api_compat.is_torch_array(A):
+            # torch.linalg.lstsq returns a namedtuple with solution and residuals
+            return xp.linalg.lstsq(A, b, driver="gelsd")[0] # type: ignore
         return xp.linalg.lstsq(A, b)[0]  # type: ignore

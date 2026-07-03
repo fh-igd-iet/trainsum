@@ -1,10 +1,8 @@
-from typing import Sequence
 import unittest
 from itertools import product
 
 from trainsum import TrainSum
-from trainsum.typing import UniformGrid
-from utils import backends
+from utils import backends, get_grid, get_idxs, assert_relative_error_less
 
 
 class TestEigsolver(unittest.TestCase):
@@ -12,30 +10,36 @@ class TestEigsolver(unittest.TestCase):
         self.trainsum = [TrainSum(backend) for backend in backends]
         self.sizes = [(1024,)]
 
-    def get_grid(self, ts, sizes: Sequence[int], lower: float, upper: float):
-        dims = [ts.dimension(size) for size in sizes]
-        domains = [ts.domain(lower, upper) for _ in sizes]
-        return ts.uniform_grid(dims, domains)
+    def test_lanczos(self) -> None:
+        for ts in self.trainsum:
+            xp = ts.namespace
+            ctype = xp.__array_namespace_info__().dtypes()["complex128"]
 
-    def get_idxs(self, ts, grid: UniformGrid):
-        xp = ts.namespace
-        idxs = xp.zeros(
-            [len(grid.dims), *[dim.size() for dim in grid.dims]], dtype=ts.index_type
-        )
-        for i, dim in enumerate(grid.dims):
-            cut = (
-                *(xp.newaxis,) * i,
-                slice(None),
-                *(xp.newaxis,) * (len(grid.dims) - i - 1),
+            mat = xp.asarray(
+                [[2.0 + 0.0j, 1.0 - 1.0j],
+                 [1.0 + 1.0j, 4.0 + 0.0j]], dtype=ctype
             )
-            idxs[i] += xp.arange(dim.size(), dtype=ts.index_type)[cut]
-        return idxs
+            guess = xp.asarray([1.0 + 0.0j, 0.25 + 0.5j], dtype=ctype)
+
+            solver = ts.lanczos(subspace=2, nsteps=2, eps=1e-12)
+            res = solver(lambda vec: mat @ vec, guess)
+            vals, vecs = xp.linalg.eigh(mat)
+            exact_val = vals[0]
+            exact_vec = vecs[:, 0]
+
+            vec = res.array / xp.sqrt(xp.sum(xp.conj(res.array) * res.array))
+            phase = exact_vec[0] / vec[0] if vec[0] != 0 else 1.0
+
+            self.assertLess(abs(res.value - exact_val), 1e-12)
+            assert_relative_error_less(
+                self, ts, exact_vec, vec * phase, 1e-12, use_abs=True
+            )
 
     def test_solve(self) -> None:
         for ts, sizes in product(self.trainsum, self.sizes):
             xp = ts.namespace
-            grid = self.get_grid(ts, sizes, -20.0, 20.0)
-            idxs = self.get_idxs(ts, grid)
+            grid = get_grid(ts, sizes, -20.0, 20.0)
+            idxs = get_idxs(ts, grid)
             coords = grid.to_coords(idxs)
 
             shape = ts.trainshape(*sizes)

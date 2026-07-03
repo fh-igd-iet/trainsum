@@ -4,5 +4,6 @@
 
 import torch as tr
 from .trainsum import TrainSum
+tr.set_default_dtype(tr.float64)
 
 trainsum = TrainSum[tr.Tensor](tr)

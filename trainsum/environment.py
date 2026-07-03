@@ -73,7 +73,7 @@ class Environment:
         if self._inp is None:
             raise RuntimeError("Input cannot be None here.")
         xp, device, dtype = self._inp.infos(*ops)
-
+    
         data = EnvironmentData(left=xp.zeros(1), right=xp.zeros(1))
         cache = self._init_cache(xp, device, dtype)
         while True:
@@ -87,13 +87,13 @@ class Environment:
                 start = start or cache[i + 1] is None
                 if start:
                     cache[i + 1] = self._contract_to_right(i, cache, ops, expr=expr)
-
+                    
             start = False
             for i in range(len(self._contr) - 1, idxs[-1], -1):
                 start = start or cache[i + 1] is None
                 if start:
                     cache[i + 1] = self._contract_to_left(i, cache, ops, expr=expr)
-
+                    
             left, right = cache[idxs[0]], cache[idxs[-1] + 2]
             if left is None or right is None:
                 raise RuntimeError("Environment data could not be computed.")

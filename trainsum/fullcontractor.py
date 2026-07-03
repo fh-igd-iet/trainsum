@@ -4,21 +4,21 @@
 
 from types import NoneType
 from copy import deepcopy
+from typing import Sequence
 
-from .backend import namespace_of_arrays
 from .trainshape import TrainShape
 from .trainbase import TrainBase
+from .einsumequation import EinsumEquation
 from .einsumcontraction import EinsumContraction
 from .contractor import ArrayContractor, OptimizeKind
-from .utils import check_operand_shapes, get_shapes
+from .utils import check_operand_shapes, get_shapes, namespace_of_trains, shape_map
 from .contractorinput import ContractorInput
-
 
 class FullContractor:
     optimizer: OptimizeKind
     _contr: EinsumContraction
     _inp: NoneType | ContractorInput = None
-    _expr: NoneType | ArrayContractor = None
+    _expr: NoneType | Sequence[ArrayContractor] = None
 
     def __init__(
         self, contr: EinsumContraction, optimizer: OptimizeKind = "greedy"
@@ -26,8 +26,8 @@ class FullContractor:
         if contr.result_shape is not None:
             raise ValueError("FullContractor can only be used for full contractions.")
 
-        self._contr = deepcopy(contr)
         self.optimizer = deepcopy(optimizer)
+        self._contr = self._get_contr(contr)
 
     def __call__(self, *ops: TrainBase, expr: bool = False) -> float | complex:
         shapes = get_shapes(*ops)
@@ -42,20 +42,32 @@ class FullContractor:
         self._inp = ContractorInput(*ops)
         self._expr = self._expression(*ops)
 
-    def _expression(self, *shapes: TrainShape | TrainBase) -> ArrayContractor:
-        lcontr = self._contr[0]
-        eq = ",".join(str(op) for op in lcontr.operands) + f"->{lcontr.result}"
-        _, tns = lcontr.get_constants(*shapes)
-        expr = ArrayContractor(eq, *tns, optimizer=self.optimizer)
-        return expr
+    def _expression(self, *shapes: TrainShape | TrainBase) -> Sequence[ArrayContractor]:
+        exprs = []
+        for lcontr in self._contr:
+            eq = f"{lcontr.result.left}," + ",".join(str(op) for op in lcontr.operands) + f"->{lcontr.result.right}"
+            _, tns = lcontr.get_constants(*shapes)
+            smap = shape_map(shapes, lcontr)
+            tmp_shape = tuple(smap[char] for char in lcontr.result.left)
+            expr = ArrayContractor(eq, tmp_shape, *tns, optimizer=self.optimizer)
+            exprs.append(expr)
+        return exprs
 
     def _contract(self, *ops: TrainBase) -> float | complex:
         if self._expr is None or self._inp is None:
             raise RuntimeError("Expression or input cannot be None here.")
-        tns = self._contr[0].get_data(*ops, idx_map=self._inp.idx_map)
-        res = self._expr(*tns)
+        xp = namespace_of_trains(*ops)
+        tmp = xp.ones(1)
+        for lcontr, expr in zip(self._contr, self._expr):
+            tns = lcontr.get_data(*ops, idx_map=self._inp.idx_map)
+            tmp = expr(tmp, *tns)
 
-        xp = namespace_of_arrays(res)
-        if xp.isdtype(res.dtype, "complex floating"):
-            return complex(res)
-        return float(res[0, 0])
+        if xp.isdtype(tmp.dtype, "complex floating"):
+            return complex(tmp[0])
+        return float(tmp[0])
+
+    def _get_contr(self, contr: EinsumContraction) -> EinsumContraction:
+        res = "".join(set(char for op in contr.equation.operands for char in op))
+        eq = ",".join(str(op) for op in contr.equation.operands) + f"->{res}"
+        neq = EinsumEquation(eq, *contr.operand_shapes)
+        return EinsumContraction(neq)

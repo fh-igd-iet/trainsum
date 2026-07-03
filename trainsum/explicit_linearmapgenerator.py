@@ -22,7 +22,7 @@ from .generatorcallabletype import GeneratorCallableType
 from .contains import contains
 
 
-class LinearMapGenerator[T: ArrayLike]:
+class ExplicitLinearMapGenerator[T: ArrayLike]:
     @property
     def result_shape(self) -> TrainShape:
         return self._ref_shape
@@ -34,7 +34,7 @@ class LinearMapGenerator[T: ArrayLike]:
     _ref_shape: TrainShape
     _exprs: dict[
         tuple[LocalRange, GeneratorCallableType],
-        tuple[LocalContraction, ArrayContractor],
+        tuple[LocalContraction, ArrayContractor, ArrayContractor],
     ]
 
     def __init__(
@@ -106,17 +106,16 @@ class LinearMapGenerator[T: ArrayLike]:
         try:
             while True:
                 lrange, mtype = yield func
-                if calc_expr or (lrange, mtype) not in self._exprs:
+                if not mtype == GeneratorCallableType.FULL:
+                    raise Exception("Only FULL allowed here")
+                if calc_expr or lrange not in self._exprs:
                     self._expression(lrange, mtype, *shapes)
                 env_data = env_gen.send(lrange)
-                tcontr, expr = self._exprs[lrange, mtype]
+                tcontr, mat_expr, map_expr = self._exprs[lrange, mtype]
                 tns = tcontr.get_data(*ops_, idx_map=self._inp.idx_map)
-                if mtype == GeneratorCallableType.FULL:
-                    func = lambda x: expr(env_data.left, *tns, x, env_data.right)
-                elif mtype == GeneratorCallableType.LEFT:
-                    func = lambda x: expr(env_data.left, *tns, x)
-                else:  # mtype == GeneratorCallableType.RIGHT:
-                    func = lambda x: expr(*tns, x, env_data.right)
+
+                mat = mat_expr(env_data.left, *tns, env_data.right)
+                func = lambda x: map_expr(mat, x)
         finally:
             env_gen.close()
 
@@ -155,36 +154,33 @@ class LinearMapGenerator[T: ArrayLike]:
         inp_shape = [smap[char] for char in str(inp_str)]
         _, tns = tcontr.get_constants(*ops)
 
-        if mtype == GeneratorCallableType.FULL:
-            res_str.left = left[0]
-            res_str.right = right[0]
-            eq = (
-                f"{left},"
-                + ",".join(str(op) for op in tcontr.operands)
-                + f",{inp_str},{right}->{res_str}"
-            )
-            tns = [left_shape, *tns, inp_shape, right_shape]
-        elif mtype == GeneratorCallableType.LEFT:
-            res_str.left = left[0]
-            res_str.right = right[1:]
-            eq = (
-                f"{left},"
-                + ",".join(str(op) for op in tcontr.operands)
-                + f",{inp_str}->{res_str}"
-            )
-            tns = [left_shape, *tns, inp_shape]
-        else:  # mtype == GeneratorCallableType.RIGHT
-            res_str.left = left[1:]
-            res_str.right = right[0]
-            eq = (
-                f",".join(str(op) for op in tcontr.operands)
-                + f",{inp_str},{right}->{res_str}"
-            )
-            tns = [*tns, inp_shape, right_shape]
+        res_str.left = left[0]
+        res_str.right = right[0]
+        if inp_str.middle == res_str.middle:
+            map_str = f"{res_str}{inp_str.left}{inp_str.right}"
+        else:
+            map_str = f"{res_str}{inp_str}"
+        if len(left) == 1:
+            map_str = map_str.replace(left[0], "")
+        if len(right) == 1:
+            map_str = map_str.replace(right[0], "")
+        mat_shape = [smap[char] for char in str(map_str)]
 
-        # tcontr.set_result(res_str)
-        expr = ArrayContractor(eq, *tns, optimizer=self.optimizer)
-        self._exprs[lrange, mtype] = tcontr, expr
+        mat_eq = (
+            f"{left},"
+            + ",".join(str(op) for op in tcontr.operands)
+            + f",{right}->{map_str}"
+        )
+        #print(mat_eq)
+        mat_tns = [left_shape, *tns, right_shape]
+        mat_expr = ArrayContractor(mat_eq, *mat_tns, optimizer=self.optimizer)
+
+        map_eq = f"{map_str},{inp_str}->{res_str}"
+        #print(map_eq)
+        map_tns = [mat_shape, inp_shape]
+        map_expr = ArrayContractor(map_eq, *map_tns, optimizer=self.optimizer)
+
+        self._exprs[lrange, mtype] = tcontr, mat_expr, map_expr
 
     def _transform_range(self, lrange: LocalRange) -> LocalRange:
         lbegin, lend = self._lcmap[lrange.begin], self._lcmap[lrange.end - 1] + 1

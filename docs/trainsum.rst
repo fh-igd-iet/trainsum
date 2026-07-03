@@ -96,6 +96,7 @@ Solver
 
    TrainSum.gmres
    TrainSum.lanczos
+   TrainSum.linear_map
    TrainSum.eigsolver
    TrainSum.linsolver
 
