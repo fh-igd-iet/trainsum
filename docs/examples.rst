@@ -11,3 +11,4 @@ Examples
     examples/MNIST.ipynb
     examples/picture_compression.ipynb
     examples/inverse.ipynb
+    examples/min_max.ipynb
