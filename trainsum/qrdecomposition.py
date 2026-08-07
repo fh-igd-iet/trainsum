@@ -5,7 +5,6 @@
 from .backend import ArrayLike
 from .backend import namespace_of_arrays
 from .matrixdecomposition import MatrixDecompositionResult
-from .gram_svd import gram_svd
 
 class QRDecomposition[T: ArrayLike]:
     """
