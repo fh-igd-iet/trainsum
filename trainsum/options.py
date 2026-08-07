@@ -161,6 +161,43 @@ class VariationalOptions[T: MatrixDecomposition](DecompositionOptions):
     pass
 
 
+class SketchingOptions(Options):
+    """
+    Context manager for sketching based einsum options.
+    """
+
+    optimizer: OptimizeKind
+    sketch_stack_size: int
+    sketch_rank: int
+    sketch_seed: int | None
+    sketch_random_distribution: Literal["gaussian", "uniform", "stiefel"]
+    sketch_mode: Literal["flattened", "stacked"]
+    direction: Direction
+
+    def __init__(
+        self,
+        *,
+        namespace: ArrayNamespace,
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+        sketch_stack_size: int = 4,
+        sketch_rank: int = 6,
+        sketch_seed: int | None = None,
+        sketch_random_distribution: Literal[
+            "gaussian", "uniform", "stiefel"
+        ] = "gaussian",
+        sketch_mode: Literal["flattened", "stacked"] = "stacked",
+        direction: Direction = Direction.TO_RIGHT,
+    ):
+        self.optimizer = deepcopy(optimizer)
+        self.sketch_stack_size = sketch_stack_size
+        self.sketch_rank = sketch_rank
+        self.sketch_seed = sketch_seed
+        self.sketch_random_distribution = sketch_random_distribution
+        self.sketch_mode = sketch_mode
+        self.direction = direction
+        super().__init__(namespace, OptionType.EINSUM)
+
+
 class CrossOptions[T: MatrixLeastSquares](Options):
     """
     Context manager for cross approximation options.
@@ -193,7 +230,13 @@ _opts: dict[Any, Options] = {}
 @overload
 def get_options(
     namespace: ArrayNamespace, otype: Literal[OptionType.EINSUM]
-) -> ExactOptions | DecompositionOptions | VariationalOptions | NormationOptions: ...
+) -> (
+    ExactOptions
+    | DecompositionOptions
+    | VariationalOptions
+    | NormationOptions
+    | SketchingOptions
+): ...
 @overload
 def get_options(
     namespace: ArrayNamespace, otype: Literal[OptionType.CROSS]
@@ -218,7 +261,8 @@ def set_options(
     | ExactOptions
     | DecompositionOptions
     | VariationalOptions
-    | NormationOptions,
+    | NormationOptions
+    | SketchingOptions,
 ) -> None:
     global _opts
     _opts[opts.key] = opts

@@ -22,25 +22,32 @@ from .exactcontractor import ExactContractor
 from .decompositioncontractor import DecompositionContractor
 from .variationalcontractor import VariationalContractor
 from .normationcontractor import NormationContractor
+from .sketchcontractor import SketchContractor
 
 
 @dataclass(frozen=True, init=False)
 class EinsumExpression[T: ArrayLike]:
     equation: str
     optimizer: OptimizeKind
-    method: Literal["exact", "decomposition", "variational", "normation"]
+    method: Literal["exact", "decomposition", "variational", "normation", "sketching"]
     decomposition: Optional[MatrixDecomposition]
     strategy: Optional[SweepingStrategy]
     result_shape: Optional[TrainShape]
     normation_max_rank: Optional[int]
     normation_cutoff: Optional[float]
     direction: Optional[Direction]
+    sketch_stack_size: int
+    sketch_rank: int
+    sketch_seed: int | None
+    sketch_random_distribution: Literal["gaussian", "uniform", "stiefel"]
+    sketch_mode: Literal["flattened", "stacked"]
     _expr: (
         FullContractor
         | ExactContractor
         | DecompositionContractor
         | tuple[DecompositionContractor, VariationalContractor]
         | NormationContractor
+        | SketchContractor
     )
 
     def __init__(
@@ -48,7 +55,7 @@ class EinsumExpression[T: ArrayLike]:
         equation: str,
         *operands: TrainShape | TrainBase[T],
         method: Literal[
-            "exact", "decomposition", "variational", "normation"
+            "exact", "decomposition", "variational", "normation", "sketching"
         ] = "decomposition",
         decomposition: Optional[MatrixDecomposition] = SVDecomposition(
             max_rank=25, cutoff=1e-12
@@ -61,6 +68,13 @@ class EinsumExpression[T: ArrayLike]:
         normation_max_rank: Optional[int] = 50,
         normation_cutoff: Optional[float] = 1e-15,
         direction: Direction = Direction.TO_RIGHT,
+        sketch_stack_size: int = 4,
+        sketch_rank: int = 6,
+        sketch_seed: int | None = None,
+        sketch_random_distribution: Literal[
+            "gaussian", "uniform", "stiefel"
+        ] = "gaussian",
+        sketch_mode: Literal["flattened", "stacked"] = "flattened",
     ) -> None:
 
         object.__setattr__(self, "equation", equation)
@@ -72,6 +86,13 @@ class EinsumExpression[T: ArrayLike]:
         object.__setattr__(self, "direction", direction)
         object.__setattr__(self, "normation_max_rank", normation_max_rank)
         object.__setattr__(self, "normation_cutoff", normation_cutoff)
+        object.__setattr__(self, "sketch_stack_size", sketch_stack_size)
+        object.__setattr__(self, "sketch_rank", sketch_rank)
+        object.__setattr__(self, "sketch_seed", sketch_seed)
+        object.__setattr__(
+            self, "sketch_random_distribution", sketch_random_distribution
+        )
+        object.__setattr__(self, "sketch_mode", sketch_mode)
 
         eq = EinsumEquation(equation, *get_shapes(*operands))
         contr = EinsumContraction(eq, result=result_shape)
@@ -85,6 +106,21 @@ class EinsumExpression[T: ArrayLike]:
             exact_expr = ExactContractor(contr, optimizer=optimizer)
             exact_expr.calc_expressions(*operands)
             object.__setattr__(self, "_expr", exact_expr)
+            return
+
+        if method == "sketching":
+            sketch_expr = SketchContractor(
+                contr,
+                optimizer=optimizer,
+                P=sketch_stack_size,
+                sketch_rank=sketch_rank,
+                seed=sketch_seed,
+                random_distribution=sketch_random_distribution,
+                sketch_mode=sketch_mode,
+                direction=direction,
+            )
+            sketch_expr.calc_expressions(*operands)
+            object.__setattr__(self, "_expr", sketch_expr)
             return
 
         if method == "normation":

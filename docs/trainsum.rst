@@ -37,8 +37,6 @@ Construction
    TrainSum.cos
    TrainSum.polyval
    TrainSum.shift
-   TrainSum.slice_vector
-   TrainSum.slice_operator
    TrainSum.toeplitz
    TrainSum.tensortrain
 

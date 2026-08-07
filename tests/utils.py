@@ -5,9 +5,10 @@ import array_api_compat as api
 backends = []
 backends = [api.array_namespace(np.zeros(1))]
 
-#import torch as tr
-#tr.set_default_dtype(tr.float64)
-#backends.append(api.array_namespace(tr.zeros(1)))
+# import torch as tr
+# tr.set_default_dtype(tr.float64)
+# backends.append(api.array_namespace(tr.zeros(1)))
+# backends.append(api.array_namespace(tr.zeros(1, device="cuda")))
 
 # import cupy as cp
 # backends.append(api.array_namespace(cp.zeros(1)))
@@ -149,3 +150,4 @@ def plot(*x):
         else:
             raise ValueError("Unsupported data shape for plotting.")
     plt.show()
+

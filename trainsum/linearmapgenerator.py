@@ -196,7 +196,7 @@ class LinearMapGenerator[T: ArrayLike]:
     def _get_contr(self, contr: EinsumContraction, target: int) -> EinsumContraction:
         ops = [*contr.operand_shapes]
         ref = ops.pop(target)
-        ops = [ref, *ops, ref]
+        ops = [contr.result_shape, *ops, ref]
         op_strs = [str(op) for op in contr.equation.operands]
         ref_op_str = op_strs.pop(target)
         eq = ",".join([contr.equation.result, *op_strs, ref_op_str]) + "->"

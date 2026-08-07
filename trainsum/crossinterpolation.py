@@ -14,6 +14,7 @@ from .backend import (
     get_index_dtype,
     shape,
     ArrayNamespace,
+    DType,
 )
 from .digit import Digit
 from .dimension import Dimension
@@ -64,6 +65,7 @@ class CrossInterpolation[T: ArrayLike]:
         start_idxs: Optional[T] = None,
     ) -> TrainBase[T]:
         train = full(xp, tshape, 0.0)
+        train.dtype = get_dtype(xp, tshape, func)
         for lrange, eps in self._gen(func, train, start_idxs):
             # print(f"eps={eps:.2e} at range {lrange.begin}:{lrange.end}", end='\n', flush=True)
             pass
@@ -207,6 +209,13 @@ def cross_interpolation_gen[T: ArrayLike](
         data = [picores[0].left()]
         for i in range(1, len(fcores)):
             data.append(picores[i - 1].result_right(solver))
+        for i in range(len(train.shape)):
+            core_shape = (
+                data[i].shape[0],
+                *train.shape.middle(i),
+                data[i].shape[-1],
+            )
+            data[i] = xp.reshape(data[i], core_shape)
         train.set_data(slice(0, len(data)), data)
 
 
@@ -258,3 +267,9 @@ def get_index(idx: int, shape: Sequence[int]) -> Sequence[int]:
         res.append(int(idx % dim))
         idx //= dim
     return list(reversed(res))
+
+def get_dtype[T: ArrayLike](xp: ArrayNamespace, shape: TrainShape, func: Callable[[T], T]) -> DType:
+    idxs = random_idxs(shape.dims)
+    x = xp.asarray(idxs, dtype=get_index_dtype(xp))[:, xp.newaxis]
+    res = func(x)
+    return res.dtype

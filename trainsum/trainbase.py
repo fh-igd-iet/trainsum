@@ -109,12 +109,20 @@ class TrainBase[T: ArrayLike]:
             and not isinstance(data, type(self._data[0]))
             and not isinstance(norm, Normalization)
         ):
+            if len(data) == 0:
+                return
+            for i in range(len(data)):
+                if data[i].shape[1:-1] != self._data[i+idx.start].shape[1:-1]:
+                    raise ValueError(
+                        f"Core data shape does not match core shape at position {i}."
+                    )
             self._data[idx] = list(data)  # type: ignore
             for i in range(idx.start, idx.stop - 1):
                 if self._data[i].shape[-1] != self._data[i + 1].shape[0]:
                     raise ValueError(
                         f"Core ranks do not match between adjacent cores at position {i}."
                     )
+
             if norm is None:
                 norm = [Normalization.NONE for _ in range(idx.stop - idx.start)]
             self._norm[idx] = norm
@@ -134,15 +142,23 @@ class TrainBase[T: ArrayLike]:
         qr = TensorDecomposition(QRDecomposition[T]())
 
         for i in range(begin):
+            if self._norm[i] == Normalization.LEFT:
+                continue
             res = qr.left(self._data[i], -1)
             self._data[i], r = res.left, res.right
             idx = len(r.shape) - 1
             self._data[i + 1] = xp.tensordot(r, self._data[i + 1], axes=([idx], [0]))
+            self._norm[i] = Normalization.LEFT
+            self._norm[i + 1] = Normalization.NONE
         for i in range(len(self._data) - 1, end - 1, -1):
+            if self._norm[i] == Normalization.RIGHT:
+                continue
             res = qr.right(self._data[i], 1)
             l, self._data[i] = res.left, res.right
             idx = len(self._data[i - 1].shape) - 1
             self._data[i - 1] = xp.tensordot(self._data[i - 1], l, axes=([idx], [0]))
+            self._norm[i - 1] = Normalization.NONE
+            self._norm[i] = Normalization.RIGHT
 
     def reverse(self) -> None:
         xp = namespace_of_arrays(self._data[0])
@@ -161,6 +177,7 @@ class TrainBase[T: ArrayLike]:
                     self._data.append(deepcopy(data))
                 else:
                     self._data.append(data)
+            self._norm.extend(train._norm)
 
     def permute_dims(self, order: Sequence[int]) -> None:
         """Permute the dimensions of the shape according to the given order."""

@@ -4,19 +4,21 @@
 
 from types import NoneType
 from typing import Callable
+
 from .backend import ArrayLike, ArrayNamespace
-from .options import (
-    get_options,
-    OptionType,
-    ExactOptions,
-    DecompositionOptions,
-    VariationalOptions,
-    NormationOptions,
-)
-from .trainshape import TrainShape
-from .trainbase import TrainBase
-from .utils import namespace_of_trains
 from .einsumexpression import EinsumExpression as _EinsumExpression
+from .options import (
+    DecompositionOptions,
+    ExactOptions,
+    NormationOptions,
+    OptionType,
+    SketchingOptions,
+    VariationalOptions,
+    get_options,
+)
+from .trainbase import TrainBase
+from .trainshape import TrainShape
+from .utils import namespace_of_trains
 
 
 class EinsumExpression[T: ArrayLike]:
@@ -65,6 +67,20 @@ class EinsumExpression[T: ArrayLike]:
                 optimizer=opts.optimizer,
                 normation_max_rank=opts.max_rank,
                 normation_cutoff=opts.cutoff,
+                direction=opts.direction,
+            )
+        elif isinstance(opts, SketchingOptions):
+            self._expr = _EinsumExpression(
+                eq,
+                *ops,
+                method="sketching",
+                optimizer=opts.optimizer,
+                result_shape=result_shape,
+                sketch_stack_size=opts.sketch_stack_size,
+                sketch_rank=opts.sketch_rank,
+                sketch_seed=opts.sketch_seed,
+                sketch_random_distribution=opts.sketch_random_distribution,
+                sketch_mode=opts.sketch_mode,
                 direction=opts.direction,
             )
         else:

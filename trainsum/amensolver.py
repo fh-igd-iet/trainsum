@@ -160,7 +160,7 @@ class AMEnSolver[T: ArrayLike, S: LocalLinSolverResult]:
                     guess.set_data(
                         slice(idx, idx + 2),
                         [left, right],
-                        [Normalization.LEFT, Normalization.NONE],
+                        [Normalization.NONE, Normalization.NONE],
                     )
 
                 else:  # Direction.TO_LEFT
@@ -202,7 +202,7 @@ class AMEnSolver[T: ArrayLike, S: LocalLinSolverResult]:
                     guess.set_data(
                         slice(idx - 1, idx + 1),
                         [left, right],
-                        [Normalization.NONE, Normalization.RIGHT],
+                        [Normalization.NONE, Normalization.NONE],
                     )
 
         finally:

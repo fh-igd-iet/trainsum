@@ -2,6 +2,9 @@
 # acting on behalf of its Fraunhofer Institut für Graphische Datenverarbeitung.
 # Licensed under the EUPL. See LICENSE.txt.
 
+# Don't sort imports:
+# ruff: noqa: I001
+
 from typing import Literal, Sequence, overload, Any, Type, Callable, Optional
 from types import NoneType
 from dataclasses import dataclass
@@ -29,11 +32,13 @@ from .eighsolver import EigHSolver
 
 from .backend import ArrayNamespace
 
+from .digit import Digit
 from .full import full as _full
 from .exponential import exp as _exp
 from .polyval import polyval as _polyval
 from .trigonometric import sin as _sin, cos as _cos
 from .toeplitz import toeplitz as _toeplitz
+from .convolution import convolve as _convolve
 from .shift import shift as _shift
 from .slice import slice_operator as _slice_operator, slice_vector as _slice_vector
 from .discrete_fourier_transform import (
@@ -74,6 +79,7 @@ from .options import (
     VariationalOptions,
     NormationOptions,
     CrossOptions,
+    SketchingOptions,
     set_options,
     get_options,
 )
@@ -662,6 +668,14 @@ class TrainSum[NDArray: Any]:
     # io wrapper
 
     @overload
+    def write(self, group: h5py.Group, obj: Digit) -> None: ...
+    @overload
+    def write(self, group: h5py.Group, obj: Dimension) -> None: ...
+    @overload
+    def write(self, group: h5py.Group, obj: TrainShape) -> None: ...
+    @overload
+    def write(self, group: h5py.Group, obj: Domain) -> None: ...
+    @overload
     def write(self, group: h5py.Group, obj: UniformGrid) -> None: ...
     @overload
     def write(self, group: h5py.Group, obj: TensorTrain[NDArray]) -> None: ...
@@ -675,6 +689,14 @@ class TrainSum[NDArray: Any]:
         else:
             _write(group, obj)
 
+    @overload
+    def read(self, group: h5py.Group, cls: Type[Digit]) -> Digit: ...
+    @overload
+    def read(self, group: h5py.Group, cls: Type[Dimension]) -> Dimension: ...
+    @overload
+    def read(self, group: h5py.Group, cls: Type[TrainShape]) -> TrainShape: ...
+    @overload
+    def read(self, group: h5py.Group, cls: Type[Domain]) -> Domain: ...
     @overload
     def read(self, group: h5py.Group, cls: Type[UniformGrid]) -> UniformGrid: ...
     @overload
@@ -859,6 +881,18 @@ class TrainSum[NDArray: Any]:
         base = outer(*[train._base for train in trains])
         return TensorTrain(base, copy_data=False)
 
+    def convolve(
+        self,
+        train1: TensorTrain[NDArray],
+        train2: TensorTrain[NDArray],
+    ) -> TensorTrain[NDArray]:
+        """
+        Full one-dimensional convolution using a binary-train selection tensor.
+        If the inputs have sizes n and m, the result has size n + m - 1.
+        """
+        base = _convolve(train1._base, train2._base)
+        return TensorTrain(base, copy_data=False)
+
     # -------------------------------------------------------------------------------------------------
     # default options
 
@@ -998,6 +1032,33 @@ class TrainSum[NDArray: Any]:
             optimizer=optimizer,
         )
 
+    def sketching(
+        self,
+        *,
+        sketch_stack_size: int = 4,
+        sketch_rank: int = 6,
+        sketch_seed: int | None = None,
+        sketch_random_distribution: Literal[
+            "gaussian", "uniform", "stiefel"
+        ] = "gaussian",
+        sketch_mode: Literal["flattened", "stacked"] = "stacked",
+        direction: Direction = Direction.TO_RIGHT,
+        optimizer: OptimizeKind = DEFAULT_OPTIMIZER,
+    ) -> SketchingOptions:
+        """
+        Sketched einsum operations.
+        """
+        return SketchingOptions(
+            namespace=self.namespace,
+            optimizer=optimizer,
+            sketch_stack_size=sketch_stack_size,
+            sketch_rank=sketch_rank,
+            sketch_seed=sketch_seed,
+            sketch_random_distribution=sketch_random_distribution,
+            sketch_mode=sketch_mode,
+            direction=direction,
+        )
+
     def cross(
         self, *, max_rank: int, eps: float, solver: Optional[MatrixLeastSquares] = None
     ) -> CrossOptions:
@@ -1032,6 +1093,7 @@ class TrainSum[NDArray: Any]:
         | VariationalOptions
         | CrossOptions
         | NormationOptions
+        | SketchingOptions
         | EvaluationOptions,
     ) -> None:
         """
@@ -1048,6 +1110,7 @@ class TrainSum[NDArray: Any]:
         | VariationalOptions
         | CrossOptions
         | NormationOptions
+        | SketchingOptions
         | EvaluationOptions
     ):
         """
