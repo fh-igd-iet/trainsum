@@ -23,7 +23,7 @@ The dependencies are:
 - array_api_compat
 - opt_einsum
 - h5py
-- pulp[cbc] (you might want to install GLPK for better performance)
+- pulp[glpk]
 
 Documentation
 -------------
@@ -31,4 +31,4 @@ The documentation for trainsum can be found at https://trainsum.readthedocs.io.
 
 Citing
 ------
-If you use trainsum in your research, please cite https://arxiv.org/abs/2602.20226.
+If you use trainsum in your research, please cite https://scipost.org/SciPostPhysCodeb.82.

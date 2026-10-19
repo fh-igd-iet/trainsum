@@ -15,7 +15,7 @@ The dependencies are:
     - array_api_compat
     - opt_einsum
     - h5py
-    - pulp[cbc] (you might want to install GLPK for better performance)
+    - pulp[glpk]
 
 Importing the library
 ---------------------
@@ -41,7 +41,7 @@ With **trainsum** this can be simply done via
 
 .. code-block:: python3 
 
-   dim = ts.dimension(20),
+   dim = ts.dimension(20)
 
 where :math:`20` is factorized into :math:`2\cdot 2\cdot 5\cdot` using the prime factorization.
 We can also explicitly specify the factorization by passing a list of integers to :meth:`~trainsum.trainsum.TrainSum.dimension`

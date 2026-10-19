@@ -174,8 +174,8 @@ class LinearIntegerEquation(IntegerEquation):
                 x.append(expr)
 
         prob += pl.lpSum(x) == self._get_rhs(), "EquationConstraint"
-        prob.solve(self._solver)
-        return pl.LpStatus[prob.status] == "Optimal"
+        res = prob.solve(self._solver)
+        return res.has_solution
 
     def _block_solution(self) -> bool:
         min_idx, max_idx = 0, 0

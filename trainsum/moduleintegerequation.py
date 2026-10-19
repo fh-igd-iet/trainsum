@@ -219,5 +219,5 @@ class ModuloIntegerEquation(IntegerEquation):
         effective_rhs = self._rhs - const_sum
         prob += pl.lpSum(rs) == effective_rhs, "DeltaConstraint"
 
-        prob.solve(self._solver)
-        return pl.LpStatus[prob.status] == "Optimal"
+        res = prob.solve(self._solver)
+        return res.has_solution

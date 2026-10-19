@@ -11,8 +11,8 @@ import pulp as pl
 from .backend import ArrayNamespace, ArrayLike
 from .dimension import Dimension
 
-PulpStandardSolver = pl.COIN_CMD
-PulpSolver = pl.GLPK_CMD | pl.COIN_CMD | pl.COPT_CMD | pl.SCIP_CMD | pl.CHOCO_CMD | pl.CPLEX_CMD | pl.FSCIP_CMD | pl.HiGHS_CMD | pl.MIPCL_CMD | pl.GUROBI_CMD | pl.XPRESS_CMD | pl.PULP_CBC_CMD
+PulpStandardSolver = pl.PYGLPK
+PulpSolver = pl.GLPK_CMD | pl.COIN_CMD | pl.COPT_CMD | pl.SCIP_CMD | pl.CHOCO_CMD | pl.CPLEX_CMD | pl.FSCIP_CMD | pl.HiGHS_CMD | pl.MIPCL_CMD | pl.GUROBI_CMD | pl.XPRESS_CMD | pl.PYGLPK
 
 class IntegerEquation(ABC):
 

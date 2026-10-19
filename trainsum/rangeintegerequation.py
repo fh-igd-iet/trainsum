@@ -211,8 +211,8 @@ class RangeIntegerEquation(IntegerEquation):
             problem += pl.lpSum(variables), "Objective"
             problem += pl.lpSum(variables) >= self.lower[idx] - offset, "LowerBound"
             problem += pl.lpSum(variables) <= self.upper[idx] - offset - 1, "UpperBound"
-            problem.solve(self._solver)
-            solvable = pl.LpStatus[problem.status] == "Optimal"
+            res = problem.solve(self._solver)
+            solvable = res.has_solution
             solution = [pl.value(var) // val for var, val in zip(variables, factors)]
             return solvable, solution
 
